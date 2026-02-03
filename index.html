@@ -154,10 +154,10 @@
               <th class="pb-2">Agent</th>
               <th class="pb-2">Gen</th>
               <th class="pb-2">Treasury</th>
-              <th class="pb-2">Positions</th>
-              <th class="pb-2">Net Worth</th>
-              <th class="pb-2">P&L</th>
+              <th class="pb-2">Trades</th>
               <th class="pb-2">W/L</th>
+              <th class="pb-2">Win Rate</th>
+              <th class="pb-2">P&L</th>
             </tr>
           </thead>
           <tbody id="performance-table" class="text-gray-300">
@@ -796,7 +796,40 @@
     function updatePerformanceTable() {
       const tbody = document.getElementById('performance-table');
       
-      // Use on-chain agent data
+      // Prefer trading state data if available (has W/L), fallback to on-chain
+      if (tradingState && tradingState.agents && tradingState.agents.length > 0) {
+        const sorted = tradingState.agents.sort((a, b) => {
+          // Sort by win rate, then by total trades
+          const aWinRate = (a.winCount + a.lossCount) > 0 ? a.winCount / (a.winCount + a.lossCount) : 0;
+          const bWinRate = (b.winCount + b.lossCount) > 0 ? b.winCount / (b.winCount + b.lossCount) : 0;
+          if (bWinRate !== aWinRate) return bWinRate - aWinRate;
+          return b.tradeCount - a.tradeCount;
+        });
+        
+        tbody.innerHTML = sorted.map((a, i) => {
+          const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '';
+          const totalSells = a.winCount + a.lossCount;
+          const winRate = totalSells > 0 ? (a.winCount / totalSells * 100).toFixed(0) : '-';
+          const winRateColor = totalSells > 0 ? (a.winCount / totalSells >= 0.5 ? 'text-green-400' : 'text-red-400') : 'text-gray-500';
+          const pnlColor = a.totalPnL >= 0 ? 'text-green-400' : 'text-red-400';
+          const pnlStr = a.totalPnL >= 0 ? `+${a.totalPnL.toFixed(4)}` : a.totalPnL.toFixed(4);
+          
+          return `
+            <tr class="border-b border-gray-800 hover:bg-gray-700/50">
+              <td class="py-2">${medal} ${a.isAlive ? '🟢' : '💀'} ${a.name}</td>
+              <td class="py-2 text-purple-400">${a.generation}</td>
+              <td class="py-2">${a.treasury.toFixed(4)} SOL</td>
+              <td class="py-2">${a.tradeCount}</td>
+              <td class="py-2">${a.winCount}/${a.lossCount}</td>
+              <td class="py-2 ${winRateColor} font-semibold">${winRate}%</td>
+              <td class="py-2 ${pnlColor}">${pnlStr}</td>
+            </tr>
+          `;
+        }).join('');
+        return;
+      }
+      
+      // Fallback to on-chain data
       if (agents.size === 0) {
         tbody.innerHTML = '<tr><td colspan="7" class="text-gray-500 py-4">Loading agents...</td></tr>';
         return;
@@ -806,21 +839,16 @@
       tbody.innerHTML = agentList.map((a, i) => {
         const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '';
         const treasury = a.treasury / LAMPORTS_PER_SOL;
-        const earnings = a.totalEarnings / LAMPORTS_PER_SOL;
-        const costs = a.totalCosts / LAMPORTS_PER_SOL;
-        const pnl = earnings - costs;
-        const pnlColor = pnl >= 0 ? 'text-green-400' : 'text-red-400';
-        const pnlStr = pnl >= 0 ? `+${pnl.toFixed(4)}` : pnl.toFixed(4);
         
         return `
           <tr class="border-b border-gray-800 hover:bg-gray-700/50 cursor-pointer" onclick="selectAgent('${a.id}')">
             <td class="py-2">${medal} ${a.isAlive ? '🟢' : '💀'} ${a.name}</td>
             <td class="py-2 text-purple-400">${a.generation}</td>
             <td class="py-2">${treasury.toFixed(4)} SOL</td>
-            <td class="py-2">${a.spawnCount} spawns</td>
-            <td class="py-2 font-semibold">${treasury.toFixed(4)} SOL</td>
-            <td class="py-2 ${pnlColor}">${pnlStr}</td>
-            <td class="py-2">${a.serviceCount} svc</td>
+            <td class="py-2">-</td>
+            <td class="py-2">-</td>
+            <td class="py-2 text-gray-500">-</td>
+            <td class="py-2">-</td>
           </tr>
         `;
       }).join('');
