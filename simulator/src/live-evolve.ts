@@ -170,20 +170,8 @@ async function saveState(agents: LiveAgent[], marketData: TokenData[], round: nu
   // Save locally
   fs.writeFileSync(STATE_PATH, JSON.stringify(state, null, 2));
   
-  // Push to JSONBin for real-time dashboard
-  try {
-    const fetch = (await import('node-fetch')).default;
-    await fetch(JSONBIN_URL, {
-      method: 'PUT',
-      headers: { 
-        'Content-Type': 'application/json',
-        'X-Access-Key': JSONBIN_ACCESS_KEY,
-      },
-      body: JSON.stringify(state),
-    });
-  } catch (e) {
-    // Silent fail - don't break simulation if JSONBin is down
-  }
+  // Auto-push disabled - use ./push-state.sh to update live dashboard manually
+  // This preserves JSONBin API quota (1000 free requests)
 }
 
 async function runLiveEvolution() {

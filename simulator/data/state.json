@@ -1,84 +1,91 @@
 {
-  "timestamp": 1770126736178,
-  "round": 2,
+  "timestamp": 1770128342009,
+  "round": 4,
   "prices": [
     {
       "symbol": "SOL",
-      "price": 103.12,
-      "change24h": 0.13
+      "price": 102.79,
+      "change24h": 0.05
     },
     {
       "symbol": "BONK",
       "price": 0.000007209,
-      "change24h": 0.47
+      "change24h": -0.4
     },
     {
       "symbol": "WIF",
-      "price": 0.2556,
-      "change24h": -0.67
+      "price": 0.2558,
+      "change24h": -1.03
     },
     {
       "symbol": "JUP",
-      "price": 0.1995,
-      "change24h": 6.91
+      "price": 0.1994,
+      "change24h": 6.28
     },
     {
       "symbol": "PYTH",
-      "price": 0.05075,
-      "change24h": -1.11
+      "price": 0.05063,
+      "change24h": -1.52
     },
     {
       "symbol": "RAY",
-      "price": 0.7012,
-      "change24h": -1
+      "price": 0.6993,
+      "change24h": -1.42
     },
     {
       "symbol": "ORCA",
-      "price": 0.9,
-      "change24h": 1.77
+      "price": 0.9016,
+      "change24h": 1.52
     },
     {
       "symbol": "JTO",
-      "price": 0.2943,
-      "change24h": 0.16
+      "price": 0.2933,
+      "change24h": 1.02
     },
     {
       "symbol": "RENDER",
-      "price": 1.56,
-      "change24h": -0.49
+      "price": 1.57,
+      "change24h": 0.05
     },
     {
       "symbol": "HNT",
-      "price": 0.9667,
-      "change24h": 0.58
+      "price": 0.9696,
+      "change24h": 0.87
     }
   ],
   "agents": [
     {
       "name": "Eve-9682",
       "generation": 1,
-      "treasury": 0.07225,
+      "treasury": 0.064927485,
       "positions": [
         {
-          "token": "SOL",
-          "entryPrice": 103.17,
-          "amount": 0.015,
-          "currentPrice": 103.12,
-          "pnlPercent": -0.04846370068818384
+          "token": "JUP",
+          "entryPrice": 0.2003,
+          "amount": 0.01275,
+          "currentPrice": 0.1994,
+          "pnlPercent": -0.44932601098353064
         },
         {
-          "token": "JUP",
-          "entryPrice": 0.1995,
-          "amount": 0.01275,
-          "currentPrice": 0.1995,
+          "token": "JTO",
+          "entryPrice": 0.2933,
+          "amount": 0.0108375,
+          "currentPrice": 0.2933,
+          "pnlPercent": 0
+        },
+        {
+          "token": "SOL",
+          "entryPrice": 102.79,
+          "amount": 0.011457791,
+          "currentPrice": 102.79,
           "pnlPercent": 0
         }
       ],
-      "netWorth": 0.09999273044489677,
-      "totalPnL": 0,
-      "tradeCount": 2,
+      "netWorth": 0.09991548693359958,
+      "totalPnL": -0.000027224,
+      "tradeCount": 5,
       "winCount": 0,
-      "lossCount": 0,
+      "lossCount": 1,
       "isAlive": true
     },
     {
@@ -88,27 +95,27 @@
       "positions": [
         {
           "token": "SOL",
-          "entryPrice": 103.17,
+          "entryPrice": 103.037,
           "amount": 0.016,
-          "currentPrice": 103.12,
-          "pnlPercent": -0.04846370068818384
-        },
-        {
-          "token": "BONK",
-          "entryPrice": 0.000007195,
-          "amount": 0.0128,
-          "currentPrice": 0.000007209,
-          "pnlPercent": 0.19457956914523677
+          "currentPrice": 102.79,
+          "pnlPercent": -0.23971971233635037
         },
         {
           "token": "JUP",
-          "entryPrice": 0.1995,
+          "entryPrice": 0.2003,
+          "amount": 0.0128,
+          "currentPrice": 0.1994,
+          "pnlPercent": -0.44932601098353064
+        },
+        {
+          "token": "ORCA",
+          "entryPrice": 0.9016,
           "amount": 0.01024,
-          "currentPrice": 0.1995,
+          "currentPrice": 0.9016,
           "pnlPercent": 0
         }
       ],
-      "netWorth": 0.08001715199274048,
+      "netWorth": 0.0799041311166203,
       "totalPnL": 0,
       "tradeCount": 3,
       "winCount": 0,
@@ -130,19 +137,11 @@
     {
       "name": "Cain-0113",
       "generation": 2,
-      "treasury": 0.049262643,
-      "positions": [
-        {
-          "token": "SOL",
-          "entryPrice": 103.17,
-          "amount": 0.010737357,
-          "currentPrice": 103.12,
-          "pnlPercent": -0.04846370068818384
-        }
-      ],
-      "netWorth": 0.0599947962794417,
+      "treasury": 0.06,
+      "positions": [],
+      "netWorth": 0.06,
       "totalPnL": 0,
-      "tradeCount": 1,
+      "tradeCount": 0,
       "winCount": 0,
       "lossCount": 0,
       "isAlive": true
@@ -150,53 +149,60 @@
     {
       "name": "Abel-1612",
       "generation": 2,
-      "treasury": 0.07225,
+      "treasury": 0.072201304,
       "positions": [
         {
           "token": "SOL",
-          "entryPrice": 103.17,
+          "entryPrice": 103.037,
           "amount": 0.015,
-          "currentPrice": 103.12,
-          "pnlPercent": -0.04846370068818384
+          "currentPrice": 102.79,
+          "pnlPercent": -0.23971971233635037
         },
         {
           "token": "JUP",
-          "entryPrice": 0.1995,
-          "amount": 0.01275,
-          "currentPrice": 0.1995,
+          "entryPrice": 0.1994,
+          "amount": 0.012741406,
+          "currentPrice": 0.1994,
           "pnlPercent": 0
         }
       ],
-      "netWorth": 0.09999273044489677,
-      "totalPnL": 0,
-      "tradeCount": 2,
+      "netWorth": 0.09990675204314954,
+      "totalPnL": -0.00005729,
+      "tradeCount": 4,
       "winCount": 0,
-      "lossCount": 0,
+      "lossCount": 1,
       "isAlive": true
     },
     {
       "name": "Enoch-4211",
       "generation": 3,
-      "treasury": 0.07225,
+      "treasury": 0.0614125,
       "positions": [
         {
           "token": "SOL",
-          "entryPrice": 103.17,
+          "entryPrice": 103.037,
           "amount": 0.015,
-          "currentPrice": 103.12,
-          "pnlPercent": -0.04846370068818384
+          "currentPrice": 102.79,
+          "pnlPercent": -0.23971971233635037
         },
         {
           "token": "JUP",
-          "entryPrice": 0.1995,
+          "entryPrice": 0.2003,
           "amount": 0.01275,
-          "currentPrice": 0.1995,
+          "currentPrice": 0.1994,
+          "pnlPercent": -0.44932601098353064
+        },
+        {
+          "token": "JTO",
+          "entryPrice": 0.2933,
+          "amount": 0.0108375,
+          "currentPrice": 0.2933,
           "pnlPercent": 0
         }
       ],
-      "netWorth": 0.09999273044489677,
+      "netWorth": 0.09990675297674916,
       "totalPnL": 0,
-      "tradeCount": 2,
+      "tradeCount": 3,
       "winCount": 0,
       "lossCount": 0,
       "isAlive": true
@@ -204,35 +210,42 @@
     {
       "name": "Gen3-4521",
       "generation": 3,
-      "treasury": 0.07225,
+      "treasury": 0.059480433,
       "positions": [
         {
+          "token": "JTO",
+          "entryPrice": 0.2933,
+          "amount": 0.012003607,
+          "currentPrice": 0.2933,
+          "pnlPercent": 0
+        },
+        {
           "token": "SOL",
-          "entryPrice": 103.17,
-          "amount": 0.015,
-          "currentPrice": 103.12,
-          "pnlPercent": -0.04846370068818384
+          "entryPrice": 102.79,
+          "amount": 0.015592003,
+          "currentPrice": 102.79,
+          "pnlPercent": 0
         },
         {
           "token": "JUP",
-          "entryPrice": 0.1995,
-          "amount": 0.01275,
-          "currentPrice": 0.1995,
+          "entryPrice": 0.1994,
+          "amount": 0.012826197,
+          "currentPrice": 0.1994,
           "pnlPercent": 0
         }
       ],
-      "netWorth": 0.09999273044489677,
-      "totalPnL": 0,
-      "tradeCount": 2,
+      "netWorth": 0.09990224,
+      "totalPnL": -0.00009776,
+      "tradeCount": 9,
       "winCount": 0,
-      "lossCount": 0,
+      "lossCount": 3,
       "isAlive": true
     }
   ],
   "summary": {
     "totalAgents": 7,
     "aliveAgents": 7,
-    "totalNetWorth": 0.5899828700517693,
-    "totalTrades": 12
+    "totalNetWorth": 0.5895353630701186,
+    "totalTrades": 24
   }
 }
