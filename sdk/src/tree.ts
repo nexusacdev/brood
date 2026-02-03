@@ -22,6 +22,8 @@ async function main() {
     "Child-0906",
     "Adam-8379",
     "Cain-0113",
+    "Abel-1612",
+    "Enoch-4211",
   ];
 
   console.log("🧬 BROOD FAMILY TREE");
