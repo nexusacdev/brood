@@ -120,13 +120,60 @@
       </div>
     </div>
 
+    <!-- Market Prices -->
+    <div class="mt-6 grid grid-cols-2 gap-6">
+      <div class="bg-gray-800 rounded-lg p-6">
+        <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+          <span>📈</span> Live Prices (Mainnet)
+        </h2>
+        <div id="market-prices" class="grid grid-cols-2 gap-2 text-sm">
+          <div class="text-gray-500">Loading prices...</div>
+        </div>
+      </div>
+
+      <!-- Trading Activity -->
+      <div class="bg-gray-800 rounded-lg p-6">
+        <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+          <span>💹</span> Trading Activity
+        </h2>
+        <div id="trading-activity" class="space-y-2 max-h-64 overflow-y-auto">
+          <div class="text-gray-500 text-sm">Run simulation to see trades...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Agent Performance -->
+    <div class="mt-6 bg-gray-800 rounded-lg p-6">
+      <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+        <span>🏆</span> Agent Performance
+      </h2>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="text-left text-gray-400 border-b border-gray-700">
+            <tr>
+              <th class="pb-2">Agent</th>
+              <th class="pb-2">Gen</th>
+              <th class="pb-2">Treasury</th>
+              <th class="pb-2">Positions</th>
+              <th class="pb-2">Net Worth</th>
+              <th class="pb-2">P&L</th>
+              <th class="pb-2">W/L</th>
+            </tr>
+          </thead>
+          <tbody id="performance-table" class="text-gray-300">
+            <tr><td colspan="7" class="text-gray-500 py-4">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
     <!-- Evolution Log -->
     <div class="mt-6 bg-gray-800 rounded-lg p-6">
       <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
         <span>📜</span> Evolution Log
         <span class="text-sm font-normal text-gray-500">(Live)</span>
       </h2>
-      <div id="evolution-log" class="mono text-sm space-y-1 max-h-64 overflow-y-auto">
+      <div id="evolution-log" class="mono text-sm space-y-1 max-h-48 overflow-y-auto">
         <div class="text-gray-500">Watching for events...</div>
       </div>
     </div>
@@ -674,14 +721,168 @@
     }
 
     function runSimulation() {
-      addLogEntry('⚠️ Run simulation from terminal: cd ~/projects/brood/simulator && npx ts-node src/evolve.ts');
-      alert('Run simulation from terminal:\n\ncd ~/projects/brood/simulator && npx ts-node src/evolve.ts\n\nThe dashboard will auto-update when it detects changes.');
+      addLogEntry('⚠️ Run simulation from terminal: cd ~/projects/brood/simulator && npx ts-node src/live-evolve.ts');
+      alert('Run simulation from terminal:\n\ncd ~/projects/brood/simulator && npx ts-node src/live-evolve.ts\n\nThe dashboard will auto-update when it detects changes.');
+    }
+
+    // Token addresses for price fetching
+    const TRACKED_TOKENS = [
+      { symbol: 'SOL', address: 'So11111111111111111111111111111111111111112' },
+      { symbol: 'BONK', address: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263' },
+      { symbol: 'WIF', address: 'EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm' },
+      { symbol: 'JUP', address: 'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN' },
+      { symbol: 'PYTH', address: 'HZ1JovNiVvGrGNiiYvEozEVgZ58xaU3RKwX8eACQBCt3' },
+      { symbol: 'RAY', address: '4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R' },
+    ];
+
+    let marketPrices = new Map();
+    let tradingState = null;
+
+    async function fetchMarketPrices() {
+      const container = document.getElementById('market-prices');
+      try {
+        const prices = [];
+        for (const token of TRACKED_TOKENS) {
+          try {
+            const response = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${token.address}`);
+            const data = await response.json();
+            if (data.pairs && data.pairs.length > 0) {
+              const pair = data.pairs.find(p => p.chainId === 'solana') || data.pairs[0];
+              const price = parseFloat(pair.priceUsd);
+              const change = pair.priceChange?.h24 || 0;
+              prices.push({ symbol: token.symbol, price, change });
+              marketPrices.set(token.symbol, price);
+            }
+          } catch (e) {}
+          await new Promise(r => setTimeout(r, 100)); // Rate limit
+        }
+
+        if (prices.length > 0) {
+          container.innerHTML = prices.map(p => {
+            const changeColor = p.change >= 0 ? 'text-green-400' : 'text-red-400';
+            const changeStr = p.change >= 0 ? `+${p.change.toFixed(2)}` : p.change.toFixed(2);
+            return `
+              <div class="flex justify-between items-center bg-gray-900 rounded p-2">
+                <span class="font-semibold">${p.symbol}</span>
+                <div class="text-right">
+                  <div>$${p.price < 0.01 ? p.price.toFixed(8) : p.price.toFixed(4)}</div>
+                  <div class="text-xs ${changeColor}">${changeStr}%</div>
+                </div>
+              </div>
+            `;
+          }).join('');
+          addLogEntry(`📈 Fetched ${prices.length} token prices`);
+        }
+      } catch (e) {
+        container.innerHTML = '<div class="text-red-400">Failed to fetch prices</div>';
+      }
+    }
+
+    async function loadTradingState() {
+      // Try to load state from GitHub raw URL (if committed)
+      const stateUrl = 'https://raw.githubusercontent.com/nexusacdev/brood/master/simulator/data/state.json';
+      try {
+        const response = await fetch(stateUrl + '?t=' + Date.now()); // Cache bust
+        if (response.ok) {
+          tradingState = await response.json();
+          updatePerformanceTable();
+          updateTradingActivity();
+          addLogEntry('📊 Loaded trading state');
+        }
+      } catch (e) {
+        // State file not available yet
+      }
+    }
+
+    function updatePerformanceTable() {
+      const tbody = document.getElementById('performance-table');
+      if (!tradingState || !tradingState.agents) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-gray-500 py-4">No trading data yet</td></tr>';
+        return;
+      }
+
+      const sorted = tradingState.agents.sort((a, b) => b.netWorth - a.netWorth);
+      tbody.innerHTML = sorted.map((a, i) => {
+        const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '';
+        const pnlColor = a.totalPnL >= 0 ? 'text-green-400' : 'text-red-400';
+        const pnlStr = a.totalPnL >= 0 ? `+${a.totalPnL.toFixed(4)}` : a.totalPnL.toFixed(4);
+        const posCount = a.positions ? a.positions.length : 0;
+        const winRate = (a.winCount + a.lossCount) > 0 
+          ? `${a.winCount}/${a.lossCount} (${(a.winCount / (a.winCount + a.lossCount) * 100).toFixed(0)}%)`
+          : '-';
+        
+        return `
+          <tr class="border-b border-gray-800 hover:bg-gray-700/50">
+            <td class="py-2">${medal} ${a.isAlive ? '🟢' : '💀'} ${a.name}</td>
+            <td class="py-2 text-purple-400">${a.generation}</td>
+            <td class="py-2">${a.treasury.toFixed(4)} SOL</td>
+            <td class="py-2">${posCount} open</td>
+            <td class="py-2 font-semibold">${a.netWorth.toFixed(4)} SOL</td>
+            <td class="py-2 ${pnlColor}">${pnlStr}</td>
+            <td class="py-2">${winRate}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function updateTradingActivity() {
+      const container = document.getElementById('trading-activity');
+      if (!tradingState || !tradingState.agents) {
+        return;
+      }
+
+      // Show recent positions
+      const activities = [];
+      for (const agent of tradingState.agents) {
+        if (agent.positions && agent.positions.length > 0) {
+          for (const pos of agent.positions) {
+            const currentPrice = marketPrices.get(pos.token) || pos.entryPrice;
+            const pnl = ((currentPrice - pos.entryPrice) / pos.entryPrice * 100);
+            const pnlColor = pnl >= 0 ? 'text-green-400' : 'text-red-400';
+            activities.push({
+              agent: agent.name,
+              token: pos.token,
+              entryPrice: pos.entryPrice,
+              currentPrice,
+              pnl,
+              pnlColor,
+            });
+          }
+        }
+      }
+
+      if (activities.length > 0) {
+        container.innerHTML = activities.map(a => `
+          <div class="flex justify-between items-center bg-gray-900 rounded p-2 text-sm">
+            <div>
+              <span class="text-gray-400">${a.agent}</span>
+              <span class="font-semibold ml-2">${a.token}</span>
+            </div>
+            <div class="text-right">
+              <div class="text-xs text-gray-500">Entry: $${a.entryPrice.toFixed(6)}</div>
+              <div class="${a.pnlColor}">${a.pnl >= 0 ? '+' : ''}${a.pnl.toFixed(2)}%</div>
+            </div>
+          </div>
+        `).join('');
+      } else {
+        container.innerHTML = '<div class="text-gray-500 text-sm">No open positions</div>';
+      }
     }
 
     // Initialize
-    init().then(() => {
+    init().then(async () => {
       addLogEntry('🧬 Dashboard initialized');
       addLogEntry(`📊 Found ${agents.size} agents on devnet`);
+      
+      // Fetch market prices
+      await fetchMarketPrices();
+      
+      // Try to load trading state
+      await loadTradingState();
+      
+      // Refresh prices every 30s
+      setInterval(fetchMarketPrices, 30000);
+      setInterval(loadTradingState, 15000);
     }).catch(e => {
       console.error('Init failed:', e);
       updateConnectionStatus('error');
