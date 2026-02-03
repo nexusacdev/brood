@@ -257,7 +257,7 @@ async function runLiveEvolution() {
     console.log(`  ${token.symbol.padEnd(8)} $${token.priceUsd.toFixed(6).padStart(12)}  ${change}%`);
   }
 
-  const MAX_ROUNDS = 30;
+  const MAX_ROUNDS = 480; // ~2 hours at 15s intervals
   let round = 0;
 
   console.log(`\n🔄 Starting evolution (${MAX_ROUNDS} rounds, ${ROUND_INTERVAL_MS/1000}s intervals)...`);
