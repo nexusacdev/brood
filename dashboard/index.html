@@ -779,22 +779,31 @@
     }
 
     async function loadTradingState() {
-      // Real-time state from JSONBlob
-      const JSONBLOB_URL = 'https://jsonblob.com/api/jsonBlob/019c2386-2f03-7837-bb40-437a62bdda1b';
+      // Real-time state from JSONBlob via CORS proxy
+      const JSONBLOB_ID = '019c2386-2f03-7837-bb40-437a62bdda1b';
+      const urls = [
+        `https://api.allorigins.win/raw?url=${encodeURIComponent('https://jsonblob.com/api/jsonBlob/' + JSONBLOB_ID)}`,
+        `https://corsproxy.io/?${encodeURIComponent('https://jsonblob.com/api/jsonBlob/' + JSONBLOB_ID)}`,
+      ];
       
-      try {
-        const response = await fetch(JSONBLOB_URL);
-        if (response.ok) {
-          tradingState = await response.json();
-          if (tradingState.round > 0) {
-            updatePerformanceTable();
-            updateTradingActivity();
-            const age = Math.floor((Date.now() - tradingState.timestamp) / 1000);
-            addLogEntry(`📊 Live state: Round ${tradingState.round} (${age}s ago)`);
+      for (const url of urls) {
+        try {
+          const response = await fetch(url);
+          if (response.ok) {
+            tradingState = await response.json();
+            if (tradingState && tradingState.round > 0) {
+              updatePerformanceTable();
+              updateTradingActivity();
+              const age = Math.floor((Date.now() - tradingState.timestamp) / 1000);
+              if (age < 300) { // Only show if less than 5 min old
+                addLogEntry(`📊 Live: Round ${tradingState.round} (${age}s ago)`);
+              }
+              return;
+            }
           }
+        } catch (e) {
+          // Try next proxy
         }
-      } catch (e) {
-        // JSONBlob not available
       }
     }
 
