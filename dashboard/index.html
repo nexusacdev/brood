@@ -167,15 +167,17 @@
     const OWNER = '8tERnd2H3pijcVZLG4qUVzB1SpAGVK8ToKXgU2yB9ppQ';
     const LAMPORTS_PER_SOL = 1000000000;
     
-    // Agent names to scan (will auto-discover children)
-    const BASE_AGENTS = [
+    // All known agents (updated when spawns happen)
+    const KNOWN_AGENTS = [
       'Alpha-719523',
       'Eve-9682', 
       'Child-0906',
       'Adam-8379',
+      'Adam-7274',
       'Cain-0113',
       'Abel-1612',
       'Enoch-4211',
+      'Gen3-4521',
     ];
 
     let connection;
@@ -235,43 +237,22 @@
     async function loadAgents() {
       // Save previous state for diff detection
       previousAgents = new Map(agents);
+      agents.clear();
       
-      // Try to fetch all program accounts
-      const programId = new solanaWeb3.PublicKey(PROGRAM_ID);
-      
-      try {
-        const accounts = await connection.getProgramAccounts(programId, {
-          filters: [{ dataSize: 500 }], // Approximate agent account size range
-        });
-        
-        // Clear and reload
-        agents.clear();
-        
-        for (const { pubkey, account } of accounts) {
-          try {
-            const agent = parseAgentAccount(account.data, pubkey.toBase58());
+      // Load each known agent by direct PDA lookup (more reliable than getProgramAccounts)
+      for (const name of KNOWN_AGENTS) {
+        try {
+          const pda = getAgentPDA(OWNER, name);
+          const accountInfo = await connection.getAccountInfo(pda);
+          
+          if (accountInfo) {
+            const agent = parseAgentAccount(accountInfo.data, pda.toBase58());
             if (agent && agent.name) {
               agents.set(agent.id, agent);
             }
-          } catch (e) {
-            // Not a valid agent account
           }
-        }
-      } catch (e) {
-        console.log('getProgramAccounts failed, falling back to known list');
-        // Fallback: load known agents
-        for (const name of BASE_AGENTS) {
-          try {
-            const pda = getAgentPDA(OWNER, name);
-            const accountInfo = await connection.getAccountInfo(pda);
-            
-            if (accountInfo) {
-              const agent = parseAgentAccount(accountInfo.data, pda.toBase58());
-              agents.set(agent.id, agent);
-            }
-          } catch (e) {
-            console.error('Error loading', name, e);
-          }
+        } catch (e) {
+          console.error('Error loading', name, e);
         }
       }
       
