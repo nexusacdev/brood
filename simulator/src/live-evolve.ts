@@ -19,6 +19,10 @@ const ROUND_INTERVAL_MS = 15_000;     // 15 seconds between rounds
 const TRADE_LOG_PATH = path.join(__dirname, '../data/trades.json');
 const STATE_PATH = path.join(__dirname, '../data/state.json');
 
+// JSONBlob for real-time dashboard updates
+const JSONBLOB_ID = '019c2386-2f03-7837-bb40-437a62bdda1b';
+const JSONBLOB_URL = `https://jsonblob.com/api/jsonBlob/${JSONBLOB_ID}`;
+
 interface TradeLogEntry {
   timestamp: number;
   round: number;
@@ -113,22 +117,25 @@ function saveTradeLog(log: TradeLogEntry[]) {
   fs.writeFileSync(TRADE_LOG_PATH, JSON.stringify(log, null, 2));
 }
 
-function saveState(agents: LiveAgent[], marketData: TokenData[], round: number) {
+async function saveState(agents: LiveAgent[], marketData: TokenData[], round: number) {
   ensureDataDir();
   
   const agentStates: AgentState[] = agents.map(a => {
     // Calculate net worth = treasury + value of positions
     let positionValue = 0;
-    const positions: { token: string; entryPrice: number; amount: number }[] = [];
+    const positions: { token: string; entryPrice: number; amount: number; currentPrice?: number; pnlPercent?: number }[] = [];
     
     for (const [token, pos] of a.strategy.positions) {
       const currentPrice = marketData.find(t => t.symbol === token)?.priceUsd || pos.entryPrice;
       const pnlMultiplier = currentPrice / pos.entryPrice;
+      const pnlPercent = (pnlMultiplier - 1) * 100;
       positionValue += pos.amount * pnlMultiplier;
       positions.push({
         token,
         entryPrice: pos.entryPrice,
         amount: pos.amount / LAMPORTS_PER_SOL,
+        currentPrice,
+        pnlPercent,
       });
     }
     
@@ -159,7 +166,20 @@ function saveState(agents: LiveAgent[], marketData: TokenData[], round: number) 
     },
   };
   
+  // Save locally
   fs.writeFileSync(STATE_PATH, JSON.stringify(state, null, 2));
+  
+  // Push to JSONBlob for real-time dashboard
+  try {
+    const fetch = (await import('node-fetch')).default;
+    await fetch(JSONBLOB_URL, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(state),
+    });
+  } catch (e) {
+    // Silent fail - don't break simulation if JSONBlob is down
+  }
 }
 
 async function runLiveEvolution() {
