@@ -775,21 +775,34 @@
     }
 
     async function loadTradingState() {
-      // Load state from GitHub (CORS-friendly)
-      const stateUrl = 'https://raw.githubusercontent.com/nexusacdev/brood/gh-pages/data/state.json';
+      // Load state from JSONBin (public bin, CORS-friendly)
+      const JSONBIN_ID = '6982027d43b1c97be96246af';
+      const stateUrl = `https://api.jsonbin.io/v3/b/${JSONBIN_ID}/latest`;
       
       try {
-        const response = await fetch(stateUrl + '?t=' + Date.now());
+        const response = await fetch(stateUrl, {
+          headers: { 'X-Bin-Meta': 'false' }  // Get just the record, not metadata
+        });
         if (response.ok) {
           tradingState = await response.json();
           if (tradingState && tradingState.round > 0) {
             const age = Math.floor((Date.now() - tradingState.timestamp) / 1000);
-            addLogEntry(`📊 Trading data: Round ${tradingState.round} (${Math.floor(age/60)}m ago)`);
+            addLogEntry(`📊 Live feed: Round ${tradingState.round} (${Math.floor(age/60)}m ago)`);
             return;
           }
         }
       } catch (e) {
-        // State file not available
+        // JSONBin not available, try GitHub fallback
+        try {
+          const ghResponse = await fetch('https://raw.githubusercontent.com/nexusacdev/brood/gh-pages/data/state.json?t=' + Date.now());
+          if (ghResponse.ok) {
+            tradingState = await ghResponse.json();
+            if (tradingState && tradingState.round > 0) {
+              const age = Math.floor((Date.now() - tradingState.timestamp) / 1000);
+              addLogEntry(`📊 GitHub data: Round ${tradingState.round} (${Math.floor(age/60)}m ago)`);
+            }
+          }
+        } catch {}
       }
     }
 

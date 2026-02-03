@@ -19,9 +19,10 @@ const ROUND_INTERVAL_MS = 15_000;     // 15 seconds between rounds
 const TRADE_LOG_PATH = path.join(__dirname, '../data/trades.json');
 const STATE_PATH = path.join(__dirname, '../data/state.json');
 
-// JSONBlob for real-time dashboard updates
-const JSONBLOB_ID = '019c2386-2f03-7837-bb40-437a62bdda1b';
-const JSONBLOB_URL = `https://jsonblob.com/api/jsonBlob/${JSONBLOB_ID}`;
+// JSONBin for real-time dashboard updates (1000 free requests)
+const JSONBIN_ID = '6982027d43b1c97be96246af';
+const JSONBIN_URL = `https://api.jsonbin.io/v3/b/${JSONBIN_ID}`;
+const JSONBIN_ACCESS_KEY = '$2a$10$Txsfu3FWRNtL8Wy1EruBxexEpaiaXB.b4hGyXJ.SUKX6Pz14rqptW';
 
 interface TradeLogEntry {
   timestamp: number;
@@ -169,16 +170,19 @@ async function saveState(agents: LiveAgent[], marketData: TokenData[], round: nu
   // Save locally
   fs.writeFileSync(STATE_PATH, JSON.stringify(state, null, 2));
   
-  // Push to JSONBlob for real-time dashboard
+  // Push to JSONBin for real-time dashboard
   try {
     const fetch = (await import('node-fetch')).default;
-    await fetch(JSONBLOB_URL, {
+    await fetch(JSONBIN_URL, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'X-Access-Key': JSONBIN_ACCESS_KEY,
+      },
       body: JSON.stringify(state),
     });
   } catch (e) {
-    // Silent fail - don't break simulation if JSONBlob is down
+    // Silent fail - don't break simulation if JSONBin is down
   }
 }
 
