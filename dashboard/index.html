@@ -181,10 +181,7 @@
     <!-- Controls -->
     <div class="mt-6 flex gap-4">
       <button onclick="refreshNow()" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg flex items-center gap-2">
-        🔄 Refresh Now
-      </button>
-      <button onclick="runSimulation()" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg flex items-center gap-2">
-        ▶️ Run Simulation
+        🔄 Refresh
       </button>
       <div class="flex items-center gap-2 ml-auto text-sm text-gray-400">
         <span>Auto-refresh:</span>
@@ -714,15 +711,14 @@
       await loadAgents();
       renderTree();
       updateStats();
+      updatePerformanceTable();
+      await fetchMarketPrices();
+      await loadTradingState();
+      updateTradingActivity();
       if (selectedAgent) {
         selectedAgent = agents.get(selectedAgent.id);
         renderAgentDetail();
       }
-    }
-
-    function runSimulation() {
-      addLogEntry('⚠️ Run simulation from terminal: cd ~/projects/brood/simulator && npx ts-node src/live-evolve.ts');
-      alert('Run simulation from terminal:\n\ncd ~/projects/brood/simulator && npx ts-node src/live-evolve.ts\n\nThe dashboard will auto-update when it detects changes.');
     }
 
     // Token addresses for price fetching
@@ -809,30 +805,32 @@
 
     function updatePerformanceTable() {
       const tbody = document.getElementById('performance-table');
-      if (!tradingState || !tradingState.agents) {
-        tbody.innerHTML = '<tr><td colspan="7" class="text-gray-500 py-4">No trading data yet</td></tr>';
+      
+      // Use on-chain agent data
+      if (agents.size === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-gray-500 py-4">Loading agents...</td></tr>';
         return;
       }
 
-      const sorted = tradingState.agents.sort((a, b) => b.netWorth - a.netWorth);
-      tbody.innerHTML = sorted.map((a, i) => {
+      const agentList = Array.from(agents.values()).sort((a, b) => b.treasury - a.treasury);
+      tbody.innerHTML = agentList.map((a, i) => {
         const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '';
-        const pnlColor = a.totalPnL >= 0 ? 'text-green-400' : 'text-red-400';
-        const pnlStr = a.totalPnL >= 0 ? `+${a.totalPnL.toFixed(4)}` : a.totalPnL.toFixed(4);
-        const posCount = a.positions ? a.positions.length : 0;
-        const winRate = (a.winCount + a.lossCount) > 0 
-          ? `${a.winCount}/${a.lossCount} (${(a.winCount / (a.winCount + a.lossCount) * 100).toFixed(0)}%)`
-          : '-';
+        const treasury = a.treasury / LAMPORTS_PER_SOL;
+        const earnings = a.totalEarnings / LAMPORTS_PER_SOL;
+        const costs = a.totalCosts / LAMPORTS_PER_SOL;
+        const pnl = earnings - costs;
+        const pnlColor = pnl >= 0 ? 'text-green-400' : 'text-red-400';
+        const pnlStr = pnl >= 0 ? `+${pnl.toFixed(4)}` : pnl.toFixed(4);
         
         return `
-          <tr class="border-b border-gray-800 hover:bg-gray-700/50">
+          <tr class="border-b border-gray-800 hover:bg-gray-700/50 cursor-pointer" onclick="selectAgent('${a.id}')">
             <td class="py-2">${medal} ${a.isAlive ? '🟢' : '💀'} ${a.name}</td>
             <td class="py-2 text-purple-400">${a.generation}</td>
-            <td class="py-2">${a.treasury.toFixed(4)} SOL</td>
-            <td class="py-2">${posCount} open</td>
-            <td class="py-2 font-semibold">${a.netWorth.toFixed(4)} SOL</td>
+            <td class="py-2">${treasury.toFixed(4)} SOL</td>
+            <td class="py-2">${a.spawnCount} spawns</td>
+            <td class="py-2 font-semibold">${treasury.toFixed(4)} SOL</td>
             <td class="py-2 ${pnlColor}">${pnlStr}</td>
-            <td class="py-2">${winRate}</td>
+            <td class="py-2">${a.serviceCount} svc</td>
           </tr>
         `;
       }).join('');
@@ -840,47 +838,54 @@
 
     function updateTradingActivity() {
       const container = document.getElementById('trading-activity');
-      if (!tradingState || !tradingState.agents) {
-        return;
-      }
-
-      // Show recent positions
-      const activities = [];
-      for (const agent of tradingState.agents) {
-        if (agent.positions && agent.positions.length > 0) {
-          for (const pos of agent.positions) {
-            const pnl = pos.pnlPercent || 0;
-            const pnlColor = pnl >= 0 ? 'text-green-400' : 'text-red-400';
-            activities.push({
-              agent: agent.name,
-              gen: agent.generation,
-              token: pos.token,
-              entryPrice: pos.entryPrice,
-              currentPrice: pos.currentPrice || pos.entryPrice,
-              pnl,
-              pnlColor,
-            });
+      
+      // Show trading info from JSONBlob if available, otherwise show placeholder
+      if (tradingState && tradingState.agents) {
+        const activities = [];
+        for (const agent of tradingState.agents) {
+          if (agent.positions && agent.positions.length > 0) {
+            for (const pos of agent.positions) {
+              const pnl = pos.pnlPercent || 0;
+              const pnlColor = pnl >= 0 ? 'text-green-400' : 'text-red-400';
+              activities.push({
+                agent: agent.name,
+                gen: agent.generation,
+                token: pos.token,
+                entryPrice: pos.entryPrice,
+                currentPrice: pos.currentPrice || pos.entryPrice,
+                pnl,
+                pnlColor,
+              });
+            }
           }
         }
-      }
 
-      if (activities.length > 0) {
-        container.innerHTML = activities.map(a => `
-          <div class="flex justify-between items-center bg-gray-900 rounded p-2 text-sm">
-            <div>
-              <span class="text-gray-400">${a.agent}</span>
-              <span class="text-purple-400 text-xs ml-1">G${a.gen}</span>
-              <span class="font-semibold ml-2">${a.token}</span>
+        if (activities.length > 0) {
+          container.innerHTML = activities.map(a => `
+            <div class="flex justify-between items-center bg-gray-900 rounded p-2 text-sm">
+              <div>
+                <span class="text-gray-400">${a.agent}</span>
+                <span class="text-purple-400 text-xs ml-1">G${a.gen}</span>
+                <span class="font-semibold ml-2">${a.token}</span>
+              </div>
+              <div class="text-right">
+                <div class="text-xs text-gray-500">$${a.entryPrice.toFixed(6)} → $${a.currentPrice.toFixed(6)}</div>
+                <div class="${a.pnlColor} font-semibold">${a.pnl >= 0 ? '+' : ''}${a.pnl.toFixed(2)}%</div>
+              </div>
             </div>
-            <div class="text-right">
-              <div class="text-xs text-gray-500">$${a.entryPrice.toFixed(6)} → $${a.currentPrice.toFixed(6)}</div>
-              <div class="${a.pnlColor} font-semibold">${a.pnl >= 0 ? '+' : ''}${a.pnl.toFixed(2)}%</div>
-            </div>
-          </div>
-        `).join('');
-      } else {
-        container.innerHTML = '<div class="text-gray-500 text-sm">No open positions</div>';
+          `).join('');
+          return;
+        }
       }
+      
+      // Fallback: show instructions
+      container.innerHTML = `
+        <div class="text-gray-400 text-sm space-y-2">
+          <div>Trading data from simulator</div>
+          <div class="text-xs text-gray-500">Run: npx ts-node src/live-evolve.ts</div>
+          <div class="text-xs text-gray-500">Logs: simulator/data/trades.json</div>
+        </div>
+      `;
     }
 
     // Initialize
@@ -888,15 +893,19 @@
       addLogEntry('🧬 Dashboard initialized');
       addLogEntry(`📊 Found ${agents.size} agents on devnet`);
       
+      // Update performance table with on-chain data
+      updatePerformanceTable();
+      
       // Fetch market prices
       await fetchMarketPrices();
       
-      // Try to load trading state
+      // Try to load trading state (may fail due to CORS)
       await loadTradingState();
+      updateTradingActivity();
       
       // Refresh prices every 30s
       setInterval(fetchMarketPrices, 30000);
-      setInterval(loadTradingState, 15000);
+      setInterval(loadTradingState, 30000);
     }).catch(e => {
       console.error('Init failed:', e);
       updateConnectionStatus('error');
