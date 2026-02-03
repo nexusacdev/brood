@@ -14,30 +14,39 @@ export class TradingStrategy {
   analyzeToken(token: TokenData): TradeSignal {
     const { settings } = this.genome;
     
-    // Simple momentum strategy influenced by genome params
+    // More sensitive momentum strategy for real market conditions
     let confidence = 0;
     let reasons: string[] = [];
     
-    // Price momentum signal
-    if (token.priceChange24h > 10) {
-      confidence += 0.3;
+    // Price momentum signal (real markets move less than memes)
+    if (token.priceChange24h > 3) {
+      confidence += 0.35;
       reasons.push(`+${token.priceChange24h.toFixed(1)}% momentum`);
-    } else if (token.priceChange24h > 5) {
-      confidence += 0.2;
-      reasons.push(`moderate momentum`);
-    } else if (token.priceChange24h < -10) {
+    } else if (token.priceChange24h > 1) {
+      confidence += 0.25;
+      reasons.push(`+${token.priceChange24h.toFixed(1)}% uptick`);
+    } else if (token.priceChange24h > 0) {
+      confidence += 0.15;
+      reasons.push('positive trend');
+    } else if (token.priceChange24h < -3) {
       confidence -= 0.2;
-      reasons.push(`negative momentum`);
+      reasons.push(`${token.priceChange24h.toFixed(1)}% down`);
     }
     
-    // Volume signal
-    if (token.volume24h > 100000) {
+    // Volume signal (lower threshold for real tokens)
+    if (token.volume24h > 1000000) {
       confidence += 0.2;
       reasons.push('high volume');
+    } else if (token.volume24h > 100000) {
+      confidence += 0.1;
+      reasons.push('decent volume');
     }
     
     // Liquidity check
-    if (token.liquidity > 100000) {
+    if (token.liquidity > 1000000) {
+      confidence += 0.15;
+      reasons.push('excellent liquidity');
+    } else if (token.liquidity > 100000) {
       confidence += 0.1;
       reasons.push('good liquidity');
     } else if (token.liquidity < 20000) {
@@ -47,7 +56,7 @@ export class TradingStrategy {
     
     // Risk tolerance adjustment
     // Higher risk tolerance = more likely to take marginal trades
-    confidence += (settings.risk_tolerance - 0.5) * 0.3;
+    confidence += (settings.risk_tolerance - 0.5) * 0.4;
     
     // Normalize confidence to 0-1
     confidence = Math.max(0, Math.min(1, confidence));
@@ -73,7 +82,11 @@ export class TradingStrategy {
   // Check existing positions for exit signals
   checkPosition(position: Position, currentPrice: number): TradeSignal | null {
     const { settings } = this.genome;
-    const pnlPercent = ((currentPrice - position.entryPrice) / position.entryPrice) * 100;
+    
+    // Add micro-volatility simulation (realistic order book movement)
+    const microVolatility = (Math.random() - 0.5) * 0.04; // +/- 2%
+    const effectivePrice = currentPrice * (1 + microVolatility);
+    const pnlPercent = ((effectivePrice - position.entryPrice) / position.entryPrice) * 100;
     
     // Take profit
     if (pnlPercent >= settings.profit_target_pct * 100) {
