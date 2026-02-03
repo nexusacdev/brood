@@ -779,26 +779,22 @@
     }
 
     async function loadTradingState() {
-      // Try to load state from gh-pages or raw GitHub URL
-      const stateUrls = [
-        './data/state.json',  // Local gh-pages
-        'https://nexusacdev.github.io/brood/data/state.json',  // gh-pages direct
-        'https://raw.githubusercontent.com/nexusacdev/brood/gh-pages/data/state.json',  // Raw
-      ];
+      // Real-time state from JSONBlob
+      const JSONBLOB_URL = 'https://jsonblob.com/api/jsonBlob/019c2386-2f03-7837-bb40-437a62bdda1b';
       
-      for (const stateUrl of stateUrls) {
-        try {
-          const response = await fetch(stateUrl + '?t=' + Date.now()); // Cache bust
-          if (response.ok) {
-            tradingState = await response.json();
+      try {
+        const response = await fetch(JSONBLOB_URL);
+        if (response.ok) {
+          tradingState = await response.json();
+          if (tradingState.round > 0) {
             updatePerformanceTable();
             updateTradingActivity();
-            addLogEntry('📊 Loaded trading state');
-            return; // Success, stop trying
+            const age = Math.floor((Date.now() - tradingState.timestamp) / 1000);
+            addLogEntry(`📊 Live state: Round ${tradingState.round} (${age}s ago)`);
           }
-        } catch (e) {
-          // Try next URL
         }
+      } catch (e) {
+        // JSONBlob not available
       }
     }
 
@@ -844,14 +840,14 @@
       for (const agent of tradingState.agents) {
         if (agent.positions && agent.positions.length > 0) {
           for (const pos of agent.positions) {
-            const currentPrice = marketPrices.get(pos.token) || pos.entryPrice;
-            const pnl = ((currentPrice - pos.entryPrice) / pos.entryPrice * 100);
+            const pnl = pos.pnlPercent || 0;
             const pnlColor = pnl >= 0 ? 'text-green-400' : 'text-red-400';
             activities.push({
               agent: agent.name,
+              gen: agent.generation,
               token: pos.token,
               entryPrice: pos.entryPrice,
-              currentPrice,
+              currentPrice: pos.currentPrice || pos.entryPrice,
               pnl,
               pnlColor,
             });
@@ -864,11 +860,12 @@
           <div class="flex justify-between items-center bg-gray-900 rounded p-2 text-sm">
             <div>
               <span class="text-gray-400">${a.agent}</span>
+              <span class="text-purple-400 text-xs ml-1">G${a.gen}</span>
               <span class="font-semibold ml-2">${a.token}</span>
             </div>
             <div class="text-right">
-              <div class="text-xs text-gray-500">Entry: $${a.entryPrice.toFixed(6)}</div>
-              <div class="${a.pnlColor}">${a.pnl >= 0 ? '+' : ''}${a.pnl.toFixed(2)}%</div>
+              <div class="text-xs text-gray-500">$${a.entryPrice.toFixed(6)} → $${a.currentPrice.toFixed(6)}</div>
+              <div class="${a.pnlColor} font-semibold">${a.pnl >= 0 ? '+' : ''}${a.pnl.toFixed(2)}%</div>
             </div>
           </div>
         `).join('');
