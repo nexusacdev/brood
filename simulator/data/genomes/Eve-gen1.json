@@ -1,0 +1,75 @@
+{
+  "version": "2.0",
+  "agentName": "Eve",
+  "skills": [
+    {
+      "id": "momentum_rider",
+      "params": {
+        "minMomentum": 3,
+        "weight": 0.4,
+        "volumeConfirm": 0.5
+      },
+      "costPerRound": 0.0001,
+      "tradesUsing": 0,
+      "profitFromSkill": 0,
+      "winRate": 0.5,
+      "enabled": true,
+      "learnedAtGeneration": 1
+    },
+    {
+      "id": "volume_surge",
+      "params": {
+        "surgeMultiplier": 2,
+        "minVolume": 100000,
+        "weight": 0.35
+      },
+      "costPerRound": 0.0001,
+      "tradesUsing": 0,
+      "profitFromSkill": 0,
+      "winRate": 0.5,
+      "enabled": true,
+      "learnedAtGeneration": 1
+    },
+    {
+      "id": "liquidity_guard",
+      "params": {
+        "minLiquidity": 50000,
+        "penaltyWeight": -0.5
+      },
+      "costPerRound": 0.00005,
+      "tradesUsing": 0,
+      "profitFromSkill": 0,
+      "winRate": 0.5,
+      "enabled": true,
+      "learnedAtGeneration": 1
+    }
+  ],
+  "learning": {
+    "learningRate": 0.1,
+    "memoryDepth": 30,
+    "explorationRate": 0.1,
+    "skillDiscoveryRate": 0.02,
+    "adaptationSpeed": 0.15
+  },
+  "exit": {
+    "takeProfitPct": 0.05,
+    "stopLossPct": 0.03,
+    "trailingStop": true,
+    "trailingStopPct": 0.02,
+    "maxHoldingRounds": 50,
+    "timeDecayPenalty": 0.01
+  },
+  "economics": {
+    "baseCostPerRound": 0.0001,
+    "totalSkillCost": 0,
+    "runway": 0,
+    "costPressure": 0
+  },
+  "lineage": {
+    "parentName": null,
+    "parentGenomeHash": null,
+    "generation": 1,
+    "birthTimestamp": 1770130888733,
+    "mutations": []
+  }
+}

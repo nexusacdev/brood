@@ -1,0 +1,212 @@
+{
+  "timestamp": 1770130935482,
+  "round": 4,
+  "prices": [
+    {
+      "symbol": "SOL",
+      "price": 100.75,
+      "change24h": -2.92
+    },
+    {
+      "symbol": "BONK",
+      "price": 0.000007173,
+      "change24h": -1.78
+    },
+    {
+      "symbol": "WIF",
+      "price": 0.2518,
+      "change24h": -2.74
+    },
+    {
+      "symbol": "JUP",
+      "price": 0.195,
+      "change24h": 2.38
+    },
+    {
+      "symbol": "PYTH",
+      "price": 0.0498,
+      "change24h": -4
+    },
+    {
+      "symbol": "RAY",
+      "price": 0.683,
+      "change24h": -5.67
+    },
+    {
+      "symbol": "ORCA",
+      "price": 0.8852,
+      "change24h": -1.48
+    },
+    {
+      "symbol": "JTO",
+      "price": 0.2889,
+      "change24h": -1.9
+    },
+    {
+      "symbol": "RENDER",
+      "price": 1.54,
+      "change24h": -2.09
+    },
+    {
+      "symbol": "HNT",
+      "price": 0.9675,
+      "change24h": -3.32
+    }
+  ],
+  "agents": [
+    {
+      "name": "Eve",
+      "generation": 1,
+      "treasury": 0.060147557,
+      "netWorth": 0.0986,
+      "isAlive": true,
+      "skills": [
+        {
+          "id": "momentum_rider",
+          "enabled": true,
+          "winRate": 0.5,
+          "profit": 0
+        },
+        {
+          "id": "volume_surge",
+          "enabled": true,
+          "winRate": 0.5,
+          "profit": 0
+        },
+        {
+          "id": "liquidity_guard",
+          "enabled": true,
+          "winRate": 0.5,
+          "profit": 0
+        }
+      ],
+      "positions": [
+        {
+          "token": "SOL",
+          "entryPrice": 100.75,
+          "amount": 0.0149475,
+          "roundsHeld": 3
+        },
+        {
+          "token": "JUP",
+          "entryPrice": 0.195,
+          "amount": 0.012705375,
+          "roundsHeld": 3
+        },
+        {
+          "token": "RAY",
+          "entryPrice": 0.683,
+          "amount": 0.010799568,
+          "roundsHeld": 3
+        }
+      ],
+      "learning": {
+        "learningRate": 0.1,
+        "memoryDepth": 30,
+        "explorationRate": 0.1,
+        "skillDiscoveryRate": 0.02,
+        "adaptationSpeed": 0.15
+      },
+      "costPressure": 0,
+      "parent": null,
+      "children": []
+    },
+    {
+      "name": "Adam",
+      "generation": 1,
+      "treasury": 0.056497125,
+      "netWorth": 0.0786,
+      "isAlive": true,
+      "skills": [
+        {
+          "id": "momentum_rider",
+          "enabled": true,
+          "winRate": 0.5,
+          "profit": 0
+        },
+        {
+          "id": "volume_surge",
+          "enabled": true,
+          "winRate": 0.5,
+          "profit": 0
+        },
+        {
+          "id": "liquidity_guard",
+          "enabled": true,
+          "winRate": 0.5,
+          "profit": 0
+        }
+      ],
+      "positions": [
+        {
+          "token": "SOL",
+          "entryPrice": 100.75,
+          "amount": 0.0119475,
+          "roundsHeld": 3
+        },
+        {
+          "token": "JUP",
+          "entryPrice": 0.195,
+          "amount": 0.010155375,
+          "roundsHeld": 3
+        }
+      ],
+      "learning": {
+        "learningRate": 0.15,
+        "memoryDepth": 30,
+        "explorationRate": 0.1,
+        "skillDiscoveryRate": 0.02,
+        "adaptationSpeed": 0.15
+      },
+      "costPressure": 0,
+      "parent": null,
+      "children": []
+    },
+    {
+      "name": "Lilith",
+      "generation": 1,
+      "treasury": 0.0586,
+      "netWorth": 0.0586,
+      "isAlive": true,
+      "skills": [
+        {
+          "id": "momentum_rider",
+          "enabled": true,
+          "winRate": 0.5,
+          "profit": 0
+        },
+        {
+          "id": "volume_surge",
+          "enabled": true,
+          "winRate": 0.5,
+          "profit": 0
+        },
+        {
+          "id": "liquidity_guard",
+          "enabled": true,
+          "winRate": 0.5,
+          "profit": 0
+        }
+      ],
+      "positions": [],
+      "learning": {
+        "learningRate": 0.08,
+        "memoryDepth": 30,
+        "explorationRate": 0.1,
+        "skillDiscoveryRate": 0.02,
+        "adaptationSpeed": 0.15
+      },
+      "costPressure": 0,
+      "parent": null,
+      "children": []
+    }
+  ],
+  "graveyard": [],
+  "summary": {
+    "totalAgents": 3,
+    "aliveAgents": 3,
+    "totalSpawns": 0,
+    "totalDeaths": 0,
+    "maxGeneration": 1
+  }
+}
