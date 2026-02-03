@@ -167,18 +167,18 @@
     const OWNER = '8tERnd2H3pijcVZLG4qUVzB1SpAGVK8ToKXgU2yB9ppQ';
     const LAMPORTS_PER_SOL = 1000000000;
     
-    // All known agents (updated when spawns happen)
-    const KNOWN_AGENTS = [
-      'Alpha-719523',
-      'Eve-9682', 
-      'Child-0906',
-      'Adam-8379',
-      'Adam-7274',
-      'Cain-0113',
-      'Abel-1612',
-      'Enoch-4211',
-      'Gen3-4521',
-    ];
+    // Pre-computed PDAs (browser PDA derivation is unreliable)
+    const AGENT_PDAS = {
+      "Alpha-719523": "GNKK2DfA4hJwPTNqG3UZNFdH89QeYoA2NTnEVQx15FX6",
+      "Eve-9682": "HvM2JtmSobBUNNevKnx3kYBXSJEWfEciKuLanY4KxTZW",
+      "Child-0906": "4ikPy2c89vbRYQCpN2n5cnYVSMeq39vWad8gGxiPQKnz",
+      "Adam-8379": "6qqRCYRM2LAJvprPMB3WZW3Znw8cVc5nvJkY7ZHQG6rM",
+      "Adam-7274": "2GsdTh8mk5prTJLkiX9DfPewy2Xvg7veiYer2XYVtvyq",
+      "Cain-0113": "5oimH3a2i51QxeM3QC54U4sTkqt6EnaouTwSpznvu7bV",
+      "Abel-1612": "GDuCd6aE62ZZw46q39KyKP6FJNsHhAZmymiwftdTESTD",
+      "Enoch-4211": "4xB859aXGY4MSDE3xFfS2iZAoTZKkKKDhhKDCkS54Trd",
+      "Gen3-4521": "D64dK5ov5VjBTaYm9AqudfrmBMSgm1ryNVrXknSRAibt",
+    };
 
     let connection;
     let agents = new Map();
@@ -239,10 +239,10 @@
       previousAgents = new Map(agents);
       agents.clear();
       
-      // Load each known agent by direct PDA lookup (more reliable than getProgramAccounts)
-      for (const name of KNOWN_AGENTS) {
+      // Load each known agent by hardcoded PDA address
+      for (const [name, pdaAddress] of Object.entries(AGENT_PDAS)) {
         try {
-          const pda = getAgentPDA(OWNER, name);
+          const pda = new solanaWeb3.PublicKey(pdaAddress);
           const accountInfo = await connection.getAccountInfo(pda);
           
           if (accountInfo) {
