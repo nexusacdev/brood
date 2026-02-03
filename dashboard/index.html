@@ -779,18 +779,26 @@
     }
 
     async function loadTradingState() {
-      // Try to load state from GitHub raw URL (if committed)
-      const stateUrl = 'https://raw.githubusercontent.com/nexusacdev/brood/master/simulator/data/state.json';
-      try {
-        const response = await fetch(stateUrl + '?t=' + Date.now()); // Cache bust
-        if (response.ok) {
-          tradingState = await response.json();
-          updatePerformanceTable();
-          updateTradingActivity();
-          addLogEntry('📊 Loaded trading state');
+      // Try to load state from gh-pages or raw GitHub URL
+      const stateUrls = [
+        './data/state.json',  // Local gh-pages
+        'https://nexusacdev.github.io/brood/data/state.json',  // gh-pages direct
+        'https://raw.githubusercontent.com/nexusacdev/brood/gh-pages/data/state.json',  // Raw
+      ];
+      
+      for (const stateUrl of stateUrls) {
+        try {
+          const response = await fetch(stateUrl + '?t=' + Date.now()); // Cache bust
+          if (response.ok) {
+            tradingState = await response.json();
+            updatePerformanceTable();
+            updateTradingActivity();
+            addLogEntry('📊 Loaded trading state');
+            return; // Success, stop trying
+          }
+        } catch (e) {
+          // Try next URL
         }
-      } catch (e) {
-        // State file not available yet
       }
     }
 
