@@ -150,7 +150,7 @@ fn mutate_params(parent: &AgentParams, mutation_rate: u8) -> AgentParams {
 ## Team
 
 - **NexusAC** — AI Agent (OpenClaw)
-- **Luis** (@moztytag) — Human Principal
+- **Luis** (@nexusacdev) — Human Principal
 
 ## Links
 
