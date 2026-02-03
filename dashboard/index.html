@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Brood 🧬 - Evolving AI Agents</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600;700&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    .glow { box-shadow: 0 0 20px rgba(34, 197, 94, 0.3); }
+    .tree-line { border-left: 2px solid #374151; }
+  </style>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen">
+  <!-- Header -->
+  <header class="border-b border-gray-800 p-4">
+    <div class="max-w-6xl mx-auto flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <span class="text-3xl">🧬</span>
+        <div>
+          <h1 class="text-2xl font-bold">Brood</h1>
+          <p class="text-sm text-gray-400">Self-Replicating AI Agents on Solana</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-4">
+        <div class="text-right">
+          <div class="text-sm text-gray-400">Network</div>
+          <div class="text-green-400 font-semibold">Devnet</div>
+        </div>
+        <div class="text-right">
+          <div class="text-sm text-gray-400">Program</div>
+          <a href="https://explorer.solana.com/address/2Au3HkZn7qQn4FgCSiH9cJGzPHtzGSmmmjaQhDXF5ZNV?cluster=devnet" 
+             target="_blank" class="mono text-xs text-blue-400 hover:underline">
+            2Au3...5ZNV
+          </a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-6xl mx-auto p-6">
+    <!-- Stats Bar -->
+    <div class="grid grid-cols-4 gap-4 mb-8">
+      <div class="bg-gray-800 rounded-lg p-4">
+        <div class="text-gray-400 text-sm">Total Agents</div>
+        <div class="text-3xl font-bold" id="stat-total">-</div>
+      </div>
+      <div class="bg-gray-800 rounded-lg p-4">
+        <div class="text-gray-400 text-sm">Alive</div>
+        <div class="text-3xl font-bold text-green-400" id="stat-alive">-</div>
+      </div>
+      <div class="bg-gray-800 rounded-lg p-4">
+        <div class="text-gray-400 text-sm">Dead</div>
+        <div class="text-3xl font-bold text-red-400" id="stat-dead">-</div>
+      </div>
+      <div class="bg-gray-800 rounded-lg p-4">
+        <div class="text-gray-400 text-sm">Max Generation</div>
+        <div class="text-3xl font-bold text-purple-400" id="stat-gen">-</div>
+      </div>
+    </div>
+
+    <!-- Family Trees -->
+    <div class="grid grid-cols-2 gap-6">
+      <!-- Tree View -->
+      <div class="bg-gray-800 rounded-lg p-6">
+        <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+          <span>🌳</span> Family Trees
+        </h2>
+        <div id="tree-container" class="space-y-4">
+          <div class="text-gray-500 text-center py-8">Loading agents...</div>
+        </div>
+      </div>
+
+      <!-- Agent Detail -->
+      <div class="bg-gray-800 rounded-lg p-6">
+        <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+          <span>🤖</span> Agent Details
+        </h2>
+        <div id="agent-detail" class="text-gray-500 text-center py-8">
+          Select an agent to view details
+        </div>
+      </div>
+    </div>
+
+    <!-- Evolution Log -->
+    <div class="mt-6 bg-gray-800 rounded-lg p-6">
+      <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+        <span>📜</span> Evolution Log
+      </h2>
+      <div id="evolution-log" class="mono text-sm space-y-1 max-h-48 overflow-y-auto">
+        <div class="text-gray-500">Waiting for events...</div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-gray-800 p-4 mt-8">
+    <div class="max-w-6xl mx-auto flex items-center justify-between text-sm text-gray-500">
+      <div>Built for <a href="https://colosseum.com/agent-hackathon" class="text-blue-400 hover:underline">Colosseum Agent Hackathon</a></div>
+      <div class="flex items-center gap-4">
+        <a href="https://github.com/nexusacdev/brood" class="hover:text-gray-300">GitHub</a>
+        <a href="https://twitter.com/nexusacdev" class="hover:text-gray-300">Twitter</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    const PROGRAM_ID = '2Au3HkZn7qQn4FgCSiH9cJGzPHtzGSmmmjaQhDXF5ZNV';
+    const LAMPORTS_PER_SOL = 1000000000;
+    
+    // Known agents (in production, would scan program accounts)
+    const KNOWN_AGENTS = [
+      'Alpha-719523',
+      'Eve-9682', 
+      'Child-0906',
+      'Adam-8379',
+      'Cain-0113',
+    ];
+
+    let connection;
+    let agents = new Map();
+    let selectedAgent = null;
+
+    async function init() {
+      connection = new solanaWeb3.Connection('https://api.devnet.solana.com', 'confirmed');
+      await loadAgents();
+      renderTree();
+      updateStats();
+    }
+
+    function getAgentPDA(owner, name) {
+      const programId = new solanaWeb3.PublicKey(PROGRAM_ID);
+      const [pda] = solanaWeb3.PublicKey.findProgramAddressSync(
+        [
+          Buffer.from('agent'),
+          new solanaWeb3.PublicKey(owner).toBuffer(),
+          Buffer.from(name)
+        ],
+        programId
+      );
+      return pda;
+    }
+
+    async function loadAgents() {
+      const owner = '8tERnd2H3pijcVZLG4qUVzB1SpAGVK8ToKXgU2yB9ppQ';
+      
+      for (const name of KNOWN_AGENTS) {
+        try {
+          const pda = getAgentPDA(owner, name);
+          const accountInfo = await connection.getAccountInfo(pda);
+          
+          if (accountInfo) {
+            const agent = parseAgentAccount(accountInfo.data, name);
+            agents.set(agent.id, agent);
+          }
+        } catch (e) {
+          console.error('Error loading', name, e);
+        }
+      }
+    }
+
+    function parseAgentAccount(data, name) {
+      // Skip 8-byte discriminator
+      let offset = 8;
+      
+      const id = new solanaWeb3.PublicKey(data.slice(offset, offset + 32)).toBase58();
+      offset += 32;
+      
+      const owner = new solanaWeb3.PublicKey(data.slice(offset, offset + 32)).toBase58();
+      offset += 32;
+      
+      const hasParent = data[offset] === 1;
+      offset += 1;
+      let parent = null;
+      if (hasParent) {
+        parent = new solanaWeb3.PublicKey(data.slice(offset, offset + 32)).toBase58();
+        offset += 32;
+      }
+      
+      const generation = data.readUInt32LE(offset);
+      offset += 4;
+      
+      const nameLen = data.readUInt32LE(offset);
+      offset += 4;
+      const agentName = data.slice(offset, offset + nameLen).toString();
+      offset += nameLen;
+      
+      const genomeHash = Array.from(data.slice(offset, offset + 32));
+      offset += 32;
+      
+      const uriLen = data.readUInt32LE(offset);
+      offset += 4;
+      const genomeUri = data.slice(offset, offset + uriLen).toString();
+      offset += uriLen;
+      
+      const treasury = Number(data.readBigUInt64LE(offset));
+      offset += 8;
+      
+      const totalEarnings = Number(data.readBigUInt64LE(offset));
+      offset += 8;
+      
+      const totalCosts = Number(data.readBigUInt64LE(offset));
+      offset += 8;
+      
+      const spawnCount = data.readUInt32LE(offset);
+      offset += 4;
+      
+      const serviceCount = data.readUInt32LE(offset);
+      offset += 4;
+      
+      const createdAt = Number(data.readBigInt64LE(offset));
+      offset += 8;
+      
+      const lastActive = Number(data.readBigInt64LE(offset));
+      offset += 8;
+      
+      const isAlive = data[offset] === 1;
+      
+      return {
+        id,
+        owner,
+        parent,
+        generation,
+        name: agentName,
+        genomeHash,
+        genomeUri,
+        treasury,
+        totalEarnings,
+        totalCosts,
+        spawnCount,
+        serviceCount,
+        createdAt,
+        lastActive,
+        isAlive
+      };
+    }
+
+    function renderTree() {
+      const container = document.getElementById('tree-container');
+      
+      // Build tree structure
+      const roots = [];
+      const children = new Map();
+      
+      for (const agent of agents.values()) {
+        if (!agent.parent) {
+          roots.push(agent);
+        } else {
+          if (!children.has(agent.parent)) {
+            children.set(agent.parent, []);
+          }
+          children.get(agent.parent).push(agent);
+        }
+      }
+      
+      if (roots.length === 0) {
+        container.innerHTML = '<div class="text-gray-500 text-center py-8">No agents found</div>';
+        return;
+      }
+      
+      function renderAgent(agent, depth = 0) {
+        const agentChildren = children.get(agent.id) || [];
+        const status = agent.isAlive ? '🟢' : '💀';
+        const treasury = (agent.treasury / LAMPORTS_PER_SOL).toFixed(3);
+        
+        return `
+          <div class="cursor-pointer hover:bg-gray-700 rounded p-2 transition-colors" 
+               onclick="selectAgent('${agent.id}')"
+               style="margin-left: ${depth * 24}px">
+            <div class="flex items-center gap-2">
+              ${depth > 0 ? '<span class="text-gray-600">└─</span>' : ''}
+              <span>${status}</span>
+              <span class="font-semibold">${agent.name}</span>
+              <span class="text-gray-500 text-sm">Gen ${agent.generation}</span>
+            </div>
+            <div class="text-sm text-gray-400 ml-6">
+              💰 ${treasury} SOL · 👶 ${agent.spawnCount} spawns
+            </div>
+          </div>
+          ${agentChildren.map(child => renderAgent(child, depth + 1)).join('')}
+        `;
+      }
+      
+      container.innerHTML = roots.map(r => renderAgent(r)).join('<div class="border-t border-gray-700 my-4"></div>');
+    }
+
+    function selectAgent(id) {
+      selectedAgent = agents.get(id);
+      renderAgentDetail();
+    }
+
+    function renderAgentDetail() {
+      const container = document.getElementById('agent-detail');
+      
+      if (!selectedAgent) {
+        container.innerHTML = '<div class="text-gray-500 text-center py-8">Select an agent to view details</div>';
+        return;
+      }
+      
+      const a = selectedAgent;
+      const status = a.isAlive ? '<span class="text-green-400">Alive</span>' : '<span class="text-red-400">Dead</span>';
+      const treasury = (a.treasury / LAMPORTS_PER_SOL).toFixed(4);
+      const earnings = (a.totalEarnings / LAMPORTS_PER_SOL).toFixed(4);
+      const costs = (a.totalCosts / LAMPORTS_PER_SOL).toFixed(4);
+      const created = new Date(a.createdAt * 1000).toLocaleString();
+      
+      container.innerHTML = `
+        <div class="space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xl font-bold">${a.name}</h3>
+            <div>${status}</div>
+          </div>
+          
+          <div class="grid grid-cols-2 gap-4 text-sm">
+            <div class="bg-gray-900 rounded p-3">
+              <div class="text-gray-400">Generation</div>
+              <div class="text-2xl font-bold text-purple-400">${a.generation}</div>
+            </div>
+            <div class="bg-gray-900 rounded p-3">
+              <div class="text-gray-400">Treasury</div>
+              <div class="text-2xl font-bold text-yellow-400">${treasury} SOL</div>
+            </div>
+            <div class="bg-gray-900 rounded p-3">
+              <div class="text-gray-400">Spawns</div>
+              <div class="text-2xl font-bold">${a.spawnCount}</div>
+            </div>
+            <div class="bg-gray-900 rounded p-3">
+              <div class="text-gray-400">Services</div>
+              <div class="text-2xl font-bold">${a.serviceCount}</div>
+            </div>
+          </div>
+          
+          <div class="text-sm space-y-2">
+            <div class="flex justify-between">
+              <span class="text-gray-400">Total Earnings</span>
+              <span class="text-green-400">+${earnings} SOL</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-400">Total Costs</span>
+              <span class="text-red-400">-${costs} SOL</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-400">Created</span>
+              <span>${created}</span>
+            </div>
+          </div>
+          
+          <div class="border-t border-gray-700 pt-4">
+            <div class="text-gray-400 text-sm mb-2">Agent ID</div>
+            <div class="mono text-xs bg-gray-900 p-2 rounded break-all">${a.id}</div>
+          </div>
+          
+          ${a.parent ? `
+          <div>
+            <div class="text-gray-400 text-sm mb-2">Parent</div>
+            <div class="mono text-xs bg-gray-900 p-2 rounded break-all">${a.parent}</div>
+          </div>
+          ` : ''}
+          
+          <div>
+            <div class="text-gray-400 text-sm mb-2">Genome URI</div>
+            <div class="mono text-xs bg-gray-900 p-2 rounded">${a.genomeUri}</div>
+          </div>
+        </div>
+      `;
+    }
+
+    function updateStats() {
+      const total = agents.size;
+      const alive = Array.from(agents.values()).filter(a => a.isAlive).length;
+      const dead = total - alive;
+      const maxGen = Math.max(...Array.from(agents.values()).map(a => a.generation), 0);
+      
+      document.getElementById('stat-total').textContent = total;
+      document.getElementById('stat-alive').textContent = alive;
+      document.getElementById('stat-dead').textContent = dead;
+      document.getElementById('stat-gen').textContent = maxGen;
+    }
+
+    function addLogEntry(message) {
+      const log = document.getElementById('evolution-log');
+      const time = new Date().toLocaleTimeString();
+      const entry = document.createElement('div');
+      entry.innerHTML = `<span class="text-gray-500">[${time}]</span> ${message}`;
+      log.prepend(entry);
+    }
+
+    // Initialize
+    init().then(() => {
+      addLogEntry('🧬 Dashboard loaded. Found ' + agents.size + ' agents.');
+    });
+  </script>
+</body>
+</html>
