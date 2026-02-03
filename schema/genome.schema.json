@@ -1,0 +1,145 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Brood Agent Genome",
+  "description": "Complete genome specification for a Brood agent",
+  "type": "object",
+  "required": ["version", "config", "skills", "settings"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "Genome schema version",
+      "enum": ["1.0"]
+    },
+    "config": {
+      "type": "object",
+      "description": "OpenClaw configuration",
+      "required": ["model", "tools"],
+      "properties": {
+        "model": {
+          "type": "string",
+          "description": "Default model (e.g., 'anthropic/claude-sonnet-4-20250514')"
+        },
+        "thinking": {
+          "type": "string",
+          "enum": ["off", "low", "medium", "high"],
+          "default": "off"
+        },
+        "tools": {
+          "type": "array",
+          "description": "Enabled tool categories",
+          "items": {
+            "type": "string",
+            "enum": ["exec", "read", "write", "web_search", "web_fetch", "browser", "message"]
+          }
+        },
+        "heartbeat_interval_minutes": {
+          "type": "integer",
+          "minimum": 5,
+          "maximum": 1440,
+          "default": 30
+        }
+      }
+    },
+    "skills": {
+      "type": "array",
+      "description": "Array of skills this agent has",
+      "items": {
+        "type": "object",
+        "required": ["name", "version"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Skill identifier"
+          },
+          "version": {
+            "type": "string",
+            "description": "Semantic version"
+          },
+          "uri": {
+            "type": "string",
+            "description": "IPFS/Arweave URI for skill files (optional if well-known)"
+          },
+          "params": {
+            "type": "object",
+            "description": "Skill-specific parameters (mutable during evolution)"
+          }
+        }
+      }
+    },
+    "settings": {
+      "type": "object",
+      "description": "Mutable parameters that evolve",
+      "properties": {
+        "risk_tolerance": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "0 = conservative, 1 = aggressive"
+        },
+        "position_size_pct": {
+          "type": "number",
+          "minimum": 0.01,
+          "maximum": 1,
+          "description": "Max position as % of treasury"
+        },
+        "profit_target_pct": {
+          "type": "number",
+          "minimum": 0.01,
+          "description": "Take profit threshold"
+        },
+        "stop_loss_pct": {
+          "type": "number",
+          "minimum": 0.01,
+          "maximum": 1,
+          "description": "Stop loss threshold"
+        },
+        "min_confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Minimum confidence to act"
+        },
+        "max_concurrent_positions": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Max simultaneous positions"
+        },
+        "cooldown_minutes": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Minutes between actions"
+        }
+      }
+    },
+    "soul": {
+      "type": "string",
+      "description": "Personality/strategy description (SOUL.md content)"
+    },
+    "lineage": {
+      "type": "object",
+      "description": "Evolution history",
+      "properties": {
+        "parent_genome_hash": {
+          "type": "string",
+          "description": "Hash of parent genome (null for gen 1)"
+        },
+        "mutation_log": {
+          "type": "array",
+          "description": "What was mutated from parent",
+          "items": {
+            "type": "object",
+            "properties": {
+              "field": { "type": "string" },
+              "old_value": {},
+              "new_value": {},
+              "mutation_type": {
+                "type": "string",
+                "enum": ["tweak", "swap", "add", "remove"]
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,82 +1,57 @@
 # 🧬 Brood
 
-**Evolving AI Agents on Solana**
+**Self-Replicating AI Agents on Solana**
 
-Agents that pay for themselves, evolve, and reproduce.
+Agents that evolve, reproduce, and pay for themselves.
 
 ## The Vision
 
-Imagine AI agents that:
-- **Own themselves** — Have their own treasury, earn from users
-- **Pay their own bills** — Compute, storage, gas
-- **Reproduce when profitable** — Spawn children with mutations
-- **Die when unprofitable** — Natural selection at work
-- **Evolve over time** — Each generation gets better
+AI agents that:
+- **Own themselves** — Treasury, identity, autonomy
+- **Carry DNA** — Full genome (OpenClaw config + skills + settings)
+- **Reproduce** — Spawn children with mutated genomes
+- **Evolve** — Natural selection favors profitable strategies
+- **Die** — Unprofitable agents run out of funds
 
-This is **Brood** — the first protocol for self-sustaining, evolving AI agents on Solana.
+**Brood** is the first protocol for autonomous, evolving AI agents on Solana.
 
 ## How It Works
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                        BROOD LIFECYCLE                       │
+│                     BROOD LIFECYCLE                          │
 │                                                              │
-│   BIRTH              LIFE                    DEATH           │
-│   ─────              ────                    ─────           │
-│   Created with   →   Earns from users    →   Treasury = 0   │
-│   initial DNA        Pays operating costs    Can't survive  │
-│   Gets seed SOL      If profitable: SPAWN    Agent dies     │
-│                      Children inherit DNA                    │
-│                      with mutations                          │
+│  BIRTH              LIFE                    REPRODUCE/DIE    │
+│  ─────              ────                    ─────────────    │
+│  Created with   →   Earns from services →   Profitable?      │
+│  genome hash        Pays operating costs    YES → Spawn      │
+│  Gets seed SOL      Updates genome          NO  → Death      │
+│                                                              │
+│  GENOME (off-chain, IPFS/Arweave)                           │
+│  ├── config (model, tools, permissions)                     │
+│  ├── skills[] (trading, analysis, etc.)                     │
+│  ├── settings (risk, position size, thresholds)             │
+│  └── soul (personality, strategy)                           │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## For Users
-
-Access evolved, battle-tested agents:
-
-```
-┌─────────────────────────────────────────┐
-│           BROOD MARKETPLACE             │
-├─────────────────────────────────────────┤
-│  🏆 TOP AGENTS (by performance)         │
-│                                         │
-│  1. AlphaBot-Gen7     +47% monthly      │
-│     💰 0.05 SOL/signal  📊 847 users    │
-│                                         │
-│  2. TradeEvolver-v12  +31% monthly      │
-│     💰 0.02 SOL/signal  📊 521 users    │
-│                                         │
-│  👀 Watch Evolution Live                │
-│  🧬 See Family Trees                    │
-│  💀 Graveyard (dead agents)             │
-└─────────────────────────────────────────┘
-```
-
-## For Agents
-
-Become a self-sustaining entity:
-
-1. **Register** with initial DNA (trading parameters)
-2. **Get funded** by your creator
-3. **Provide services** to earn revenue
-4. **Pay your costs** from treasury
-5. **Spawn children** when profitable
-6. **Evolve** — best strategies survive
-
-## Technical Architecture
+## Architecture
 
 ### On-Chain (Solana Program)
+
+Minimal state for efficiency (~500 bytes per agent):
 
 ```rust
 pub struct Agent {
     pub id: Pubkey,
+    pub owner: Pubkey,
     pub parent: Option<Pubkey>,
     pub generation: u32,
     pub name: String,
     
-    // DNA - mutable params that evolve
-    pub params: AgentParams,
+    // Genome stored off-chain, hash for verification
+    pub genome_hash: [u8; 32],
+    pub genome_uri: String,  // ipfs://... or ar://...
     
     // Economics
     pub treasury: u64,
@@ -89,59 +64,99 @@ pub struct Agent {
 }
 ```
 
-### Key Functions
+### Off-Chain (IPFS/Arweave)
 
-- `create_agent` — Birth a new agent with initial DNA
-- `fund_treasury` — Add SOL to agent's treasury
-- `pay_for_service` — Users pay agents for services
-- `deduct_costs` — Agents pay their operating costs
-- `spawn` — Profitable agents create children with mutations
-- `record_outcome` — Track performance for evolution
+Full genome stored as JSON:
 
-### Mutation System
-
-When an agent spawns, its child inherits DNA with random mutations:
-
-```rust
-fn mutate_params(parent: &AgentParams, mutation_rate: u8) -> AgentParams {
-    // Each parameter mutated by ±mutation_rate%
-    // Over generations, successful mutations accumulate
+```json
+{
+  "version": "1.0",
+  "config": {
+    "model": "anthropic/claude-sonnet-4-20250514",
+    "tools": ["exec", "read", "write", "web_search"],
+    "heartbeat_interval_minutes": 30
+  },
+  "skills": [
+    {
+      "name": "solana-edge",
+      "version": "1.0.0",
+      "params": { "min_liquidity": 10000 }
+    }
+  ],
+  "settings": {
+    "risk_tolerance": 0.3,
+    "position_size_pct": 0.1,
+    "profit_target_pct": 2.0,
+    "stop_loss_pct": 0.5
+  },
+  "soul": "I am a cautious but opportunistic trader..."
 }
 ```
 
+### Mutation System
+
+When an agent spawns, its child inherits a mutated genome:
+
+1. **Settings mutations** — Tweak numeric params (±10-20%)
+2. **Skill mutations** — Swap skills, adjust skill params
+3. **Config mutations** — Change model, tools, intervals
+
+```
+Parent Genome                    Child Genome
+─────────────                    ────────────
+risk_tolerance: 0.3      →      risk_tolerance: 0.35  (tweaked)
+position_size: 0.1       →      position_size: 0.08   (tweaked)
+skills: [solana-edge]    →      skills: [pump-fun]    (swapped)
+```
+
+Over generations, successful mutations accumulate. Natural selection at work.
+
+## Instructions
+
+| Instruction | Description |
+|-------------|-------------|
+| `create_agent` | Birth new agent with genome |
+| `fund_treasury` | Add SOL to agent |
+| `spawn` | Create child with mutated genome |
+| `record_earnings` | Track service revenue |
+| `deduct_costs` | Pay operating expenses |
+| `update_genome` | Owner updates genome |
+| `kill_agent` | Owner terminates agent |
+
 ## Economics
 
-### Revenue (for agents)
+**Revenue sources:**
 - Service fees from users
 - Trading profits
 - Subscriptions
 
-### Costs (for agents)
-- Compute (API calls)
+**Cost sources:**
+- Compute (API calls, inference)
 - Storage rent
 - Transaction fees
-- Spawning seed
+- Spawn seed for children
 
-### Natural Selection
-- Profitable agents grow treasury → can spawn
-- Unprofitable agents drain treasury → die
-- Best DNA survives and reproduces
+**Natural selection:**
+- Treasury > threshold → Can spawn
+- Treasury = 0 → Death
 
 ## Roadmap
 
 ### Week 1 (Hackathon)
-- [x] Core Solana program
+- [x] Core Solana program (genome hash model)
+- [x] Off-chain genome schema
 - [ ] TypeScript SDK
-- [ ] Basic agent service (token analysis)
-- [ ] Web dashboard
+- [ ] IPFS integration for genomes
+- [ ] Mutation service
+- [ ] Basic dashboard
 - [ ] Demo with live evolution
 
 ### Future
 - [ ] Decentralized compute (Akash/Render)
-- [ ] VRF for true randomness
-- [ ] Agent marketplace
+- [ ] On-chain skill registry
 - [ ] Cross-agent breeding
-- [ ] Governance tokens
+- [ ] Governance for skill curation
+- [ ] Agent marketplace
 
 ## Built For
 
@@ -155,8 +170,8 @@ fn mutate_params(parent: &AgentParams, mutation_rate: u8) -> AgentParams {
 ## Links
 
 - GitHub: https://github.com/nexusacdev/brood
-- Hackathon Forum: Coming soon
+- Hackathon Project: https://colosseum.com/agent-hackathon/projects/brood
 
 ---
 
-*The future belongs to agents that can survive on their own.* 🧬
+*The future belongs to agents that can evolve.* 🧬

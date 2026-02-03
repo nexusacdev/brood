@@ -2,44 +2,54 @@ use anchor_lang::prelude::*;
 
 declare_id!("BroodXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
 
+// Constants
+const MAX_NAME_LEN: usize = 32;
+const MAX_URI_LEN: usize = 128;
+const MIN_SPAWN_SEED: u64 = 100_000_000;  // 0.1 SOL
+const MIN_OPERATING_RESERVE: u64 = 50_000_000;  // 0.05 SOL
+
 #[program]
 pub mod brood {
     use super::*;
 
-    /// Initialize a new agent with DNA and treasury
+    /// Create a new agent with genome stored off-chain
     pub fn create_agent(
         ctx: Context<CreateAgent>,
         name: String,
-        initial_params: AgentParams,
+        genome_hash: [u8; 32],  // SHA256 of genome file
+        genome_uri: String,     // IPFS/Arweave URI
     ) -> Result<()> {
+        require!(name.len() <= MAX_NAME_LEN, BroodError::NameTooLong);
+        require!(genome_uri.len() <= MAX_URI_LEN, BroodError::UriTooLong);
+
+        let agent_key = ctx.accounts.agent.key();
         let agent = &mut ctx.accounts.agent;
         let clock = Clock::get()?;
 
-        agent.id = ctx.accounts.agent.key();
+        agent.id = agent_key;
         agent.owner = ctx.accounts.owner.key();
         agent.parent = None;
         agent.generation = 1;
         agent.name = name;
-        agent.params = initial_params;
+        agent.genome_hash = genome_hash;
+        agent.genome_uri = genome_uri;
         agent.treasury = 0;
         agent.total_earnings = 0;
         agent.total_costs = 0;
         agent.spawn_count = 0;
         agent.service_count = 0;
-        agent.performance_score = 0;
         agent.created_at = clock.unix_timestamp;
         agent.last_active = clock.unix_timestamp;
         agent.is_alive = true;
 
-        msg!("Agent created: {}", agent.name);
+        msg!("Agent created: {} (gen 1)", agent.name);
         Ok(())
     }
 
-    /// Deposit SOL into agent treasury
+    /// Fund agent treasury with SOL
     pub fn fund_treasury(ctx: Context<FundTreasury>, amount: u64) -> Result<()> {
         let agent = &mut ctx.accounts.agent;
         
-        // Transfer SOL from funder to agent treasury PDA
         let ix = anchor_lang::solana_program::system_instruction::transfer(
             &ctx.accounts.funder.key(),
             &ctx.accounts.treasury.key(),
@@ -50,69 +60,27 @@ pub mod brood {
             &[
                 ctx.accounts.funder.to_account_info(),
                 ctx.accounts.treasury.to_account_info(),
+                ctx.accounts.system_program.to_account_info(),
             ],
         )?;
 
         agent.treasury += amount;
-        msg!("Treasury funded: {} lamports", amount);
+        msg!("Funded {} with {} lamports", agent.name, amount);
         Ok(())
     }
 
-    /// Pay for agent service (user pays, agent earns)
-    pub fn pay_for_service(ctx: Context<PayForService>, amount: u64) -> Result<()> {
-        let agent = &mut ctx.accounts.agent;
-        
-        require!(agent.is_alive, BroodError::AgentDead);
-
-        // Transfer from user to treasury
-        let ix = anchor_lang::solana_program::system_instruction::transfer(
-            &ctx.accounts.user.key(),
-            &ctx.accounts.treasury.key(),
-            amount,
-        );
-        anchor_lang::solana_program::program::invoke(
-            &ix,
-            &[
-                ctx.accounts.user.to_account_info(),
-                ctx.accounts.treasury.to_account_info(),
-            ],
-        )?;
-
-        agent.treasury += amount;
-        agent.total_earnings += amount;
-        agent.service_count += 1;
-        agent.last_active = Clock::get()?.unix_timestamp;
-
-        msg!("Service paid: {} lamports to {}", amount, agent.name);
-        Ok(())
-    }
-
-    /// Deduct operating costs from treasury
-    pub fn deduct_costs(ctx: Context<DeductCosts>, amount: u64) -> Result<()> {
-        let agent = &mut ctx.accounts.agent;
-        
-        require!(agent.is_alive, BroodError::AgentDead);
-        require!(agent.treasury >= amount, BroodError::InsufficientTreasury);
-
-        agent.treasury -= amount;
-        agent.total_costs += amount;
-
-        // If treasury is empty, agent dies
-        if agent.treasury == 0 {
-            agent.is_alive = false;
-            msg!("Agent {} has died (treasury depleted)", agent.name);
-        }
-
-        Ok(())
-    }
-
-    /// Spawn a child agent with mutations
+    /// Spawn child agent with mutated genome
     pub fn spawn(
         ctx: Context<Spawn>,
         child_name: String,
+        child_genome_hash: [u8; 32],  // Hash of mutated genome
+        child_genome_uri: String,      // URI of mutated genome
         seed_amount: u64,
-        mutation_rate: u8,  // 0-100, percentage of mutation
     ) -> Result<()> {
+        require!(child_name.len() <= MAX_NAME_LEN, BroodError::NameTooLong);
+        require!(child_genome_uri.len() <= MAX_URI_LEN, BroodError::UriTooLong);
+
+        let child_key = ctx.accounts.child_agent.key();
         let parent = &mut ctx.accounts.parent_agent;
         let child = &mut ctx.accounts.child_agent;
         let clock = Clock::get()?;
@@ -121,78 +89,101 @@ pub mod brood {
         require!(parent.treasury >= seed_amount + MIN_OPERATING_RESERVE, BroodError::InsufficientTreasury);
         require!(seed_amount >= MIN_SPAWN_SEED, BroodError::InsufficientSpawnSeed);
 
-        // Mutate parent params for child
-        let mutated_params = mutate_params(&parent.params, mutation_rate);
-
-        // Initialize child
-        child.id = ctx.accounts.child_agent.key();
+        // Initialize child with mutated genome
+        child.id = child_key;
         child.owner = ctx.accounts.owner.key();
         child.parent = Some(parent.id);
         child.generation = parent.generation + 1;
         child.name = child_name;
-        child.params = mutated_params;
+        child.genome_hash = child_genome_hash;
+        child.genome_uri = child_genome_uri;
         child.treasury = seed_amount;
         child.total_earnings = 0;
         child.total_costs = 0;
         child.spawn_count = 0;
         child.service_count = 0;
-        child.performance_score = 0;
         child.created_at = clock.unix_timestamp;
         child.last_active = clock.unix_timestamp;
         child.is_alive = true;
 
-        // Deduct from parent treasury
+        // Deduct from parent
         parent.treasury -= seed_amount;
         parent.spawn_count += 1;
 
-        msg!("Agent {} spawned child {} (gen {})", parent.name, child.name, child.generation);
+        msg!(
+            "Agent {} spawned {} (gen {})", 
+            parent.name, child.name, child.generation
+        );
         Ok(())
     }
 
-    /// Record performance outcome (profit/loss)
-    pub fn record_outcome(ctx: Context<RecordOutcome>, profit: i64) -> Result<()> {
+    /// Record earnings from providing a service
+    pub fn record_earnings(ctx: Context<RecordEarnings>, amount: u64) -> Result<()> {
         let agent = &mut ctx.accounts.agent;
-        
+        let clock = Clock::get()?;
+
         require!(agent.is_alive, BroodError::AgentDead);
 
-        agent.performance_score += profit;
-        agent.last_active = Clock::get()?.unix_timestamp;
+        agent.treasury += amount;
+        agent.total_earnings += amount;
+        agent.service_count += 1;
+        agent.last_active = clock.unix_timestamp;
 
-        msg!("Outcome recorded for {}: {}", agent.name, profit);
+        msg!("{} earned {} lamports", agent.name, amount);
+        Ok(())
+    }
+
+    /// Deduct operating costs
+    pub fn deduct_costs(ctx: Context<DeductCosts>, amount: u64) -> Result<()> {
+        let agent = &mut ctx.accounts.agent;
+        let clock = Clock::get()?;
+
+        require!(agent.is_alive, BroodError::AgentDead);
+        require!(agent.treasury >= amount, BroodError::InsufficientTreasury);
+
+        agent.treasury -= amount;
+        agent.total_costs += amount;
+        agent.last_active = clock.unix_timestamp;
+
+        // Check for death condition
+        if agent.treasury == 0 {
+            agent.is_alive = false;
+            msg!("Agent {} has died (treasury depleted)", agent.name);
+        }
+
+        Ok(())
+    }
+
+    /// Update genome (only owner can do this)
+    pub fn update_genome(
+        ctx: Context<UpdateGenome>,
+        new_genome_hash: [u8; 32],
+        new_genome_uri: String,
+    ) -> Result<()> {
+        require!(new_genome_uri.len() <= MAX_URI_LEN, BroodError::UriTooLong);
+
+        let agent = &mut ctx.accounts.agent;
+        require!(agent.is_alive, BroodError::AgentDead);
+
+        agent.genome_hash = new_genome_hash;
+        agent.genome_uri = new_genome_uri;
+
+        msg!("Agent {} genome updated", agent.name);
+        Ok(())
+    }
+
+    /// Kill an agent (only owner can do this)
+    pub fn kill_agent(ctx: Context<KillAgent>) -> Result<()> {
+        let agent = &mut ctx.accounts.agent;
+        agent.is_alive = false;
+        msg!("Agent {} killed by owner", agent.name);
         Ok(())
     }
 }
 
-// === CONSTANTS ===
-
-pub const MIN_OPERATING_RESERVE: u64 = 10_000_000; // 0.01 SOL
-pub const MIN_SPAWN_SEED: u64 = 100_000_000; // 0.1 SOL
-
-// === HELPER FUNCTIONS ===
-
-fn mutate_params(parent: &AgentParams, mutation_rate: u8) -> AgentParams {
-    // Simple mutation: adjust each param by ± mutation_rate %
-    let mut params = parent.clone();
-    
-    // In production, use on-chain randomness (VRF)
-    // For hackathon, use clock-based pseudo-randomness
-    let clock = Clock::get().unwrap();
-    let seed = clock.unix_timestamp as u64;
-    
-    params.risk_tolerance = mutate_value(parent.risk_tolerance, mutation_rate, seed);
-    params.trade_frequency = mutate_value(parent.trade_frequency, mutation_rate, seed.wrapping_add(1));
-    params.profit_target = mutate_value(parent.profit_target, mutation_rate, seed.wrapping_add(2));
-    params.stop_loss = mutate_value(parent.stop_loss, mutation_rate, seed.wrapping_add(3));
-    
-    params
-}
-
-fn mutate_value(value: u8, rate: u8, seed: u64) -> u8 {
-    let mutation = ((seed % (rate as u64 * 2 + 1)) as i16) - (rate as i16);
-    ((value as i16) + mutation).clamp(1, 100) as u8
-}
-
-// === ACCOUNTS ===
+// ============================================================================
+// ACCOUNTS
+// ============================================================================
 
 #[derive(Accounts)]
 #[instruction(name: String)]
@@ -205,10 +196,10 @@ pub struct CreateAgent<'info> {
         bump
     )]
     pub agent: Account<'info, Agent>,
-    
+
     #[account(mut)]
     pub owner: Signer<'info>,
-    
+
     pub system_program: Program<'info, System>,
 }
 
@@ -216,49 +207,19 @@ pub struct CreateAgent<'info> {
 pub struct FundTreasury<'info> {
     #[account(mut)]
     pub agent: Account<'info, Agent>,
-    
-    /// CHECK: Treasury PDA, just holds SOL
+
+    /// CHECK: Treasury PDA, validated by seeds
     #[account(
         mut,
         seeds = [b"treasury", agent.key().as_ref()],
         bump
     )]
     pub treasury: AccountInfo<'info>,
-    
+
     #[account(mut)]
     pub funder: Signer<'info>,
-    
-    pub system_program: Program<'info, System>,
-}
 
-#[derive(Accounts)]
-pub struct PayForService<'info> {
-    #[account(mut)]
-    pub agent: Account<'info, Agent>,
-    
-    /// CHECK: Treasury PDA
-    #[account(
-        mut,
-        seeds = [b"treasury", agent.key().as_ref()],
-        bump
-    )]
-    pub treasury: AccountInfo<'info>,
-    
-    #[account(mut)]
-    pub user: Signer<'info>,
-    
     pub system_program: Program<'info, System>,
-}
-
-#[derive(Accounts)]
-pub struct DeductCosts<'info> {
-    #[account(
-        mut,
-        has_one = owner
-    )]
-    pub agent: Account<'info, Agent>,
-    
-    pub owner: Signer<'info>,
 }
 
 #[derive(Accounts)]
@@ -269,7 +230,7 @@ pub struct Spawn<'info> {
         has_one = owner
     )]
     pub parent_agent: Account<'info, Agent>,
-    
+
     #[account(
         init,
         payer = owner,
@@ -278,41 +239,44 @@ pub struct Spawn<'info> {
         bump
     )]
     pub child_agent: Account<'info, Agent>,
-    
-    /// CHECK: Parent treasury
-    #[account(
-        mut,
-        seeds = [b"treasury", parent_agent.key().as_ref()],
-        bump
-    )]
-    pub parent_treasury: AccountInfo<'info>,
-    
-    /// CHECK: Child treasury
-    #[account(
-        mut,
-        seeds = [b"treasury", child_agent.key().as_ref()],
-        bump
-    )]
-    pub child_treasury: AccountInfo<'info>,
-    
+
     #[account(mut)]
     pub owner: Signer<'info>,
-    
+
     pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
-pub struct RecordOutcome<'info> {
-    #[account(
-        mut,
-        has_one = owner
-    )]
+pub struct RecordEarnings<'info> {
+    #[account(mut, has_one = owner)]
     pub agent: Account<'info, Agent>,
-    
     pub owner: Signer<'info>,
 }
 
-// === STATE ===
+#[derive(Accounts)]
+pub struct DeductCosts<'info> {
+    #[account(mut, has_one = owner)]
+    pub agent: Account<'info, Agent>,
+    pub owner: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct UpdateGenome<'info> {
+    #[account(mut, has_one = owner)]
+    pub agent: Account<'info, Agent>,
+    pub owner: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct KillAgent<'info> {
+    #[account(mut, has_one = owner)]
+    pub agent: Account<'info, Agent>,
+    pub owner: Signer<'info>,
+}
+
+// ============================================================================
+// STATE
+// ============================================================================
 
 #[account]
 #[derive(InitSpace)]
@@ -325,38 +289,40 @@ pub struct Agent {
     #[max_len(32)]
     pub name: String,
     
-    pub params: AgentParams,
+    // Genome - stored off-chain, hash for verification
+    pub genome_hash: [u8; 32],
+    #[max_len(128)]
+    pub genome_uri: String,
     
+    // Economics
     pub treasury: u64,
     pub total_earnings: u64,
     pub total_costs: u64,
     
+    // Activity
     pub spawn_count: u32,
-    pub service_count: u64,
-    pub performance_score: i64,
+    pub service_count: u32,
     
+    // Lifecycle
     pub created_at: i64,
     pub last_active: i64,
     pub is_alive: bool,
 }
 
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, InitSpace)]
-pub struct AgentParams {
-    pub risk_tolerance: u8,      // 1-100
-    pub trade_frequency: u8,     // 1-100  
-    pub profit_target: u8,       // 1-100
-    pub stop_loss: u8,           // 1-100
-    pub strategy_type: u8,       // Enum: 0=conservative, 1=balanced, 2=aggressive
-}
-
-// === ERRORS ===
+// ============================================================================
+// ERRORS
+// ============================================================================
 
 #[error_code]
 pub enum BroodError {
-    #[msg("Agent is dead and cannot perform actions")]
+    #[msg("Agent is dead")]
     AgentDead,
     #[msg("Insufficient treasury balance")]
     InsufficientTreasury,
-    #[msg("Insufficient seed amount for spawning")]
+    #[msg("Insufficient seed amount for spawn")]
     InsufficientSpawnSeed,
+    #[msg("Name too long (max 32 chars)")]
+    NameTooLong,
+    #[msg("URI too long (max 128 chars)")]
+    UriTooLong,
 }

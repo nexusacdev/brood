@@ -1,0 +1,43 @@
+{
+  "version": "1.0",
+  "config": {
+    "model": "anthropic/claude-sonnet-4-20250514",
+    "thinking": "low",
+    "tools": ["exec", "read", "write", "web_search", "web_fetch"],
+    "heartbeat_interval_minutes": 30
+  },
+  "skills": [
+    {
+      "name": "solana-edge",
+      "version": "1.0.0",
+      "params": {
+        "chains": ["solana", "base"],
+        "min_liquidity": 10000,
+        "max_age_hours": 24,
+        "social_verification": true
+      }
+    },
+    {
+      "name": "pump-fun",
+      "version": "1.0.0",
+      "params": {
+        "max_slippage_pct": 5,
+        "use_jito": true
+      }
+    }
+  ],
+  "settings": {
+    "risk_tolerance": 0.3,
+    "position_size_pct": 0.1,
+    "profit_target_pct": 2.0,
+    "stop_loss_pct": 0.5,
+    "min_confidence": 0.7,
+    "max_concurrent_positions": 3,
+    "cooldown_minutes": 15
+  },
+  "soul": "I am a cautious but opportunistic trader. I prioritize capital preservation but will take calculated risks when signals are strong. I learn from every trade and adjust my approach based on market conditions.",
+  "lineage": {
+    "parent_genome_hash": null,
+    "mutation_log": []
+  }
+}
