@@ -3,10 +3,10 @@ seeds = false
 skip-lint = false
 
 [programs.localnet]
-brood = "BroodXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+brood = "2Au3HkZn7qQn4FgCSiH9cJGzPHtzGSmmmjaQhDXF5ZNV"
 
 [programs.devnet]
-brood = "BroodXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+brood = "2Au3HkZn7qQn4FgCSiH9cJGzPHtzGSmmmjaQhDXF5ZNV"
 
 [registry]
 url = "https://api.apr.dev"
